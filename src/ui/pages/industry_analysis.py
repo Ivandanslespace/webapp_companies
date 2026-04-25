@@ -233,7 +233,7 @@ def layout() -> html.Div:
                                     value="description",
                                     data=[
                                         {"label": "Description", "value": "description"},
-                                        {"label": "Graphe industrie", "value": "industry"},
+                                        {"label": "Historique facteurs", "value": "industry"},
                                         {"label": "Indicateurs détaillés", "value": "indicators"},
                                     ],
                                     fullWidth=True,
@@ -266,7 +266,7 @@ def layout() -> html.Div:
                                         className="drawer-tab-panel",
                                         children=[
                                             dmc.Text(
-                                                "Scores (facteurs) — historique vs pairs bench",
+                                                "Historique des facteurs (société sélectionnée)",
                                                 size="sm",
                                                 fw=600,
                                             ),

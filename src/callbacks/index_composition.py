@@ -4,7 +4,6 @@ from __future__ import annotations
 from collections import OrderedDict
 
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import pandas as pd
 from dash import Input, Output, State, callback, clientside_callback, no_update, callback_context
 import dash_mantine_components as dmc
@@ -31,7 +30,6 @@ from src.ui.components.news_timeline import render_news_timeline
 from src.services.drawer_figure_cache import (
     get_ptf_factor_dict,
     get_ptf_metric_bundle,
-    ptf_factor_cache_key,
     ptf_metric_cache_key,
     set_ptf_factor,
     set_ptf_metric_bundle,
@@ -40,6 +38,33 @@ from src.services.drawer_figure_cache import (
 _GRAY = "rgba(120,120,120,0.2)"
 _ACCENT = "#0F766E"
 _BLUE = "#1E40AF"
+
+# Libellés produit -> colonnes CIQ (screen_aggregateCIQ) ; Value = Dividend Avg Percentile dans ce jeu de données.
+_FACTOR_TRACE_SPEC: tuple[tuple[str, str], ...] = (
+    ("Quality", "Quality Avg Percentile"),
+    ("Growth", "Growth Avg Percentile"),
+    ("Lowvol", "LowVol Avg Percentile"),
+    ("Momentum", "MOM Score"),
+    ("Value", "Dividend Avg Percentile"),
+    ("ML", "Score ML"),
+)
+_COL_MULTIFACTOR = "Multi Avg Percentile"
+_BASE_COLS_SYNTH_MULTIFACTOR: tuple[str, ...] = (
+    "Quality Avg Percentile",
+    "Growth Avg Percentile",
+    "LowVol Avg Percentile",
+    "MOM Score",
+    "Dividend Avg Percentile",
+)
+_FACTOR_TRACE_COLORS: tuple[str, ...] = (
+    "#0F766E",
+    "#1D4ED8",
+    "#C026D3",
+    "#D97706",
+    "#DC2626",
+    "#4F46E5",
+    "#059669",
+)
 
 _MAX_PTF_DETAIL = 20
 _ptf_detail_cache: OrderedDict[str, tuple] = OrderedDict()
@@ -59,60 +84,132 @@ def _ptf_detail_cache_set(isin: str, desc, news_df) -> None:
         _ptf_detail_cache.popitem(last=False)
 
 
-def build_peer_factor_figure(H: pd.DataFrame, isin: str) -> go.Figure:
-    """7 sous-graphiques facteurs (pairs gris + ancre) ; ``H`` = historique bench."""
-    nfac = len([c for c in FACTOR_SCORE_COLUMNS if c in H.columns])
-    if nfac == 0:
-        fig7 = go.Figure()
-        fig7.update_layout(title="Aucun facteur (colonnes) dans les données", height=200)
-        return fig7
-    n_rows = nfac
-    fig7 = make_subplots(
-        rows=n_rows,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.04,
-        subplot_titles=[c for c in FACTOR_SCORE_COLUMNS if c in H.columns],
-    )
-    rnum = 0
-    for col in FACTOR_SCORE_COLUMNS:
-        if col not in H.columns:
+def _synthetic_multifactor_at_row(row: pd.Series) -> float:
+    """Moyenne des 5 bases disponibles ; NaN si < 3 valeurs numériques (ML exclu)."""
+    vals: list[float] = []
+    for c in _BASE_COLS_SYNTH_MULTIFACTOR:
+        if c not in row.index:
             continue
-        rnum += 1
-        anc, peers, _err = peer_fan_timeseries(H, isin, col)
-        for _pid, ser in peers.items():
-            fig7.add_trace(
+        v = row[c]
+        if v is not None and not (isinstance(v, float) and pd.isna(v)):
+            try:
+                vals.append(float(v))
+            except (TypeError, ValueError):
+                pass
+    if len(vals) < 3:
+        return float("nan")
+    return sum(vals) / len(vals)
+
+
+def build_company_factor_history_figure(H: pd.DataFrame, isin: str) -> go.Figure:
+    """Une seule figure : historique facteurs de la société (sans peers). ``H`` = historique bench."""
+    fig = go.Figure()
+    if H.empty or not isin:
+        fig.update_layout(title="Aucune donnée", height=240, template="plotly_white")
+        return fig
+    sub = H.loc[H[CIQ_COL_ISIN].astype(str).str.strip() == str(isin).strip()].copy()
+    if sub.empty:
+        fig.update_layout(
+            title="Historique des facteurs",
+            annotations=[
+                dict(
+                    text="ISIN absent de l'historique bench",
+                    xref="paper",
+                    yref="paper",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                )
+            ],
+            height=320,
+            template="plotly_white",
+        )
+        return fig
+    sub[CIQ_COL_DATE] = pd.to_datetime(sub[CIQ_COL_DATE], errors="coerce")
+    sub = sub.dropna(subset=[CIQ_COL_DATE])
+    need_cols = {
+        c
+        for _, c in _FACTOR_TRACE_SPEC
+    } | {_COL_MULTIFACTOR}
+    need_cols = {c for c in need_cols if c in sub.columns}
+    if not need_cols:
+        fig.update_layout(
+            title="Historique des facteurs",
+            annotations=[
+                dict(
+                    text="Aucune colonne facteur dans les données",
+                    xref="paper",
+                    yref="paper",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                )
+            ],
+            height=320,
+            template="plotly_white",
+        )
+        return fig
+    agg = sub.groupby(CIQ_COL_DATE, sort=True)[sorted(need_cols)].mean()
+    color_i = 0
+    for label, col in _FACTOR_TRACE_SPEC:
+        if col not in agg.columns:
+            continue
+        ser = agg[col].dropna()
+        if ser.empty:
+            continue
+        color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
+        color_i += 1
+        fig.add_trace(
+            go.Scattergl(
+                x=ser.index,
+                y=ser.values,
+                mode="lines",
+                name=label,
+                line={"color": color, "width": 2},
+            )
+        )
+    if _COL_MULTIFACTOR in agg.columns and agg[_COL_MULTIFACTOR].notna().any():
+        ser_m = agg[_COL_MULTIFACTOR].dropna()
+        if not ser_m.empty:
+            color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
+            color_i += 1
+            fig.add_trace(
                 go.Scattergl(
-                    x=ser.index,
-                    y=ser.values,
+                    x=ser_m.index,
+                    y=ser_m.values,
                     mode="lines",
-                    line={"color": _GRAY, "width": 1},
-                    showlegend=False,
-                    hoverinfo="skip",
-                ),
-                row=rnum,
-                col=1,
+                    name="MultiFactor",
+                    line={"color": color, "width": 2.5},
+                )
             )
-        if anc is not None and len(anc) > 0:
-            fig7.add_trace(
-                go.Scatter(
-                    x=anc.index,
-                    y=anc.values,
+    else:
+        synth = agg.apply(_synthetic_multifactor_at_row, axis=1)
+        synth = synth.dropna()
+        if not synth.empty:
+            color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
+            fig.add_trace(
+                go.Scattergl(
+                    x=synth.index,
+                    y=synth.values,
                     mode="lines",
-                    name=col,
-                    line={"color": _ACCENT, "width": 2},
-                ),
-                row=rnum,
-                col=1,
+                    name="MultiFactor",
+                    line={"color": color, "width": 2.5},
+                )
             )
-    fig7.update_layout(
+    if not fig.data:
+        fig.update_layout(title="Historique des facteurs", height=320, template="plotly_white")
+        return fig
+    fig.update_layout(
+        title="Historique des facteurs",
         template="plotly_white",
-        height=max(200, 190 * n_rows),
-        showlegend=False,
-        margin=dict(l=50, r=20, t=20, b=20),
+        height=440,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(l=50, r=24, t=72, b=48),
+        xaxis_title="Date",
+        yaxis_title="Score",
     )
-    fig7.update_yaxes(tickformat=".2f", hoverformat=".2f")
-    return fig7
+    fig.update_yaxes(tickformat=".2f", hoverformat=".2f")
+    return fig
 
 
 def build_peer_metric_figure(
@@ -348,14 +445,14 @@ def _ptf_factor_graphs(isin: str | None, bench: str | None):
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty
-    key = ptf_factor_cache_key(isin, bench)
+    key = f"sf|{isin}|{bench}"
     hit = get_ptf_factor_dict(key)
     if hit is not None:
         return hit
     H = ridx.history_for_index(bench)
     if H.empty:
         return empty
-    fig = build_peer_factor_figure(H, isin)
+    fig = build_company_factor_history_figure(H, isin)
     set_ptf_factor(key, fig)
     return fig
 

@@ -30,13 +30,12 @@ from src.callbacks.index_composition import (  # réutilise constantes + figures
     _round2,
     _weight_to_pct2,
     _is_bench_weight_col,
-    build_peer_factor_figure,
+    build_company_factor_history_figure,
     build_peer_metric_figure,
 )
 from src.services.drawer_figure_cache import (
     get_ind_factor_dict,
     get_ind_metric_bundle,
-    ind_factor_cache_key,
     ind_metric_cache_key,
     set_ind_factor,
     set_ind_metric_bundle,
@@ -238,14 +237,14 @@ def _ind_factor_graphs(isin: str | None, bench: str | None, sector: str | None):
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty
-    key = ind_factor_cache_key(isin, bench, str(sector))
+    key = f"sf|{isin}|{bench}|{sector}"
     hit = get_ind_factor_dict(key)
     if hit is not None:
         return hit
     H = ridx.history_for_index(bench)
     if H.empty:
         return empty
-    fig = build_peer_factor_figure(H, isin)
+    fig = build_company_factor_history_figure(H, isin)
     set_ind_factor(key, fig)
     return fig
 
