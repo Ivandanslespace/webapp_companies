@@ -5,17 +5,17 @@ from collections import OrderedDict
 
 import plotly.graph_objects as go
 import pandas as pd
-from dash import Input, Output, State, callback, clientside_callback, no_update, callback_context
+from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update, callback_context
 import dash_mantine_components as dmc
 
 from src.data.index_screen_repository import get_index_screen_repository
 from src.data.ptf_column_groups import (
     FACTOR_SCORE_COLUMNS,
-    METADATA_DATA_TABLE_IDS,
     filter_groups_for_ciq,
 )
 from src.data.schemas_ciq import (
     CIQ_COL_DATE,
+    CIQ_COL_ICB_SUPERSECTOR,
     CIQ_COL_ISIN,
     CIQ_COL_NAME,
     WEIGHT_IN_PREFIX,
@@ -29,10 +29,7 @@ from src.ui.components.description_panel import render_description_panel
 from src.ui.components.news_timeline import render_news_timeline
 from src.services.drawer_figure_cache import (
     get_ptf_factor_dict,
-    get_ptf_metric_bundle,
-    ptf_metric_cache_key,
     set_ptf_factor,
-    set_ptf_metric_bundle,
 )
 
 _GRAY = "rgba(120,120,120,0.2)"
@@ -275,6 +272,65 @@ def build_peer_metric_figure(
     return figm, mtitle
 
 
+_MAX_MM = 40
+_mm_ptf_fig: OrderedDict[str, dict] = OrderedDict()
+_mm_ind_fig: OrderedDict[str, dict] = OrderedDict()
+
+
+def _mm_cache_get(d: OrderedDict[str, dict], key: str) -> dict | None:
+    if key not in d:
+        return None
+    d.move_to_end(key)
+    return d[key]
+
+
+def _mm_cache_set(d: OrderedDict[str, dict], key: str, fig: go.Figure) -> None:
+    d[key] = fig.to_plotly_json()
+    d.move_to_end(key)
+    while len(d) > _MAX_MM:
+        d.popitem(last=False)
+
+
+def _drawer_metric_col_ok(col: str, av: set[str], df: pd.DataFrame) -> bool:
+    if not col or col not in av or col not in df.columns:
+        return False
+    if col in ("isin", "name", "ptf_w", CIQ_COL_ISIN, CIQ_COL_NAME):
+        return False
+    if _is_bench_weight_col(col):
+        return False
+    if col in FACTOR_SCORE_COLUMNS:
+        return False
+    if not pd.api.types.is_numeric_dtype(df[col]):
+        return False
+    return True
+
+
+def build_drawer_metric_multiselect_data(av: set[str], df: pd.DataFrame) -> list[dict]:
+    """Options groupées pour Mantine MultiSelect : ``[{group, items:[{value,label},...]}, ...]``."""
+    groups = filter_groups_for_ciq(av)
+    out: list[dict] = []
+    for g in groups:
+        items: list[dict] = []
+        for lab, c in g.entries:
+            if not _drawer_metric_col_ok(c, av, df):
+                continue
+            items.append({"value": c, "label": lab})
+        if items:
+            out.append({"group": g.label, "items": items})
+    return out
+
+
+def history_bench_sector_slice(H: pd.DataFrame, sector: str | None) -> pd.DataFrame:
+    """ICB : restreint l’historique au super-secteur courant (comparaison gris)."""
+    if H.empty or not sector:
+        return H
+    scol = CIQ_COL_ICB_SUPERSECTOR
+    if scol not in H.columns:
+        return H
+    s = str(sector).strip()
+    return H.loc[H[scol].astype(str).str.strip() == s].copy()
+
+
 def _fmt(d: str | None) -> str:
     if d is None:
         return ""
@@ -465,30 +521,46 @@ def _ptf_factor_graphs(isin: str | None, bench: str | None):
     return fig
 
 
+def _peer_metric_fig_ptf(isin: str, bench: str, col: str, H: pd.DataFrame) -> go.Figure:
+    k = f"mm|ptf|{isin}|{bench}|{col}"
+    hit = _mm_cache_get(_mm_ptf_fig, k)
+    if hit is not None:
+        return hit
+    fig, _t = build_peer_metric_figure(H, isin, col)
+    if fig.data:
+        fig.update_layout(title=col)
+    _mm_cache_set(_mm_ptf_fig, k, fig)
+    return fig
+
+
 @callback(
-    Output("ptf-graph-metric", "figure"),
-    Output("ptf-metric-title", "children"),
+    Output("ptf-metric-charts-wrap", "children"),
     Input("ptf-selected-isin", "data"),
-    Input("ptf-active-metric", "data"),
+    Input("ptf-metric-multiselect", "value"),
     Input("ptf-bench", "value"),
 )
-def _ptf_metric_graph(isin: str | None, active_m: str | None, bench: str | None):
-    empty_m = go.Figure()
-    if not isin or not bench:
-        return empty_m, "—"
+def _ptf_metric_charts_wrap(isin: str | None, metrics: list | None, bench: str | None):
+    if not isin or not bench or not metrics:
+        return []
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
-        return empty_m, "—"
-    key = ptf_metric_cache_key(isin, bench, active_m)
-    bundle = get_ptf_metric_bundle(key)
-    if bundle is not None:
-        return bundle
+        return []
     H = ridx.history_for_index(bench)
     if H.empty:
-        return empty_m, "—"
-    fig, title = build_peer_metric_figure(H, isin, active_m)
-    set_ptf_metric_bundle(key, fig, str(title))
-    return fig, title
+        return []
+    order = list(dict.fromkeys(str(m) for m in metrics if m))
+    blocks: list = []
+    for col in order:
+        if col not in H.columns or col in FACTOR_SCORE_COLUMNS:
+            continue
+        fig = _peer_metric_fig_ptf(str(isin).strip(), bench, col, H)
+        blocks.append(
+            html.Div(
+                dcc.Graph(figure=fig, config={"displaylogo": False}, style={"height": "380px"}),
+                style={"marginBottom": "20px"},
+            )
+        )
+    return blocks
 
 
 def _row_index_for_isin(data: list | None, isin_s: str) -> list[int]:
@@ -502,68 +574,49 @@ def _row_index_for_isin(data: list | None, isin_s: str) -> list[int]:
 
 @callback(
     Output("ptf-selected-isin", "data"),
-    Output("ptf-active-metric", "data"),
     Output("ptf-table", "selected_rows"),
     Input("ptf-table", "data"),
     Input("ptf-table", "active_cell"),
-    State("ptf-cols", "value"),
     State("ptf-selected-isin", "data"),
-    State("ptf-active-metric", "data"),
 )
 def _ptf_data_or_cell(
     data: list | None,
     cell: dict | None,
-    ptf_cols: list | None,
     cur_isin: str | None,
-    cur_metric: str | None,
 ):
-    """Tableau mis à jour ou clic cellule : ISIN + coches alignées (sans cycle avec selected_rows)."""
+    """ISIN + ligne cochée ; clic cellule ne pilote plus les graphiques métriques."""
     if not callback_context.triggered:
-        return no_update, no_update, no_update
+        return no_update, no_update
     prop_id = callback_context.triggered[0]["prop_id"]
-    ptf_cols = ptf_cols or []
 
     if prop_id == "ptf-table.data":
         if not data:
-            return None, None, []
+            return None, []
         valid = {str(r.get("isin")) for r in data if r.get("isin")}
         if cur_isin and str(cur_isin).strip() in valid:
-            m = cur_metric
-            if m and m not in ptf_cols:
-                m = None
             isin_s = str(cur_isin).strip()
-            return isin_s, m, _row_index_for_isin(data, isin_s)
-        return None, None, []
+            return isin_s, _row_index_for_isin(data, isin_s)
+        return None, []
 
     if not data:
-        return no_update, no_update, no_update
+        return no_update, no_update
 
     if prop_id == "ptf-table.active_cell" and cell:
-        r, cid = cell.get("row"), cell.get("column_id")
-        if r is None or cid is None or r >= len(data):
-            return no_update, no_update, no_update
+        r = cell.get("row")
+        if r is None or r >= len(data):
+            return no_update, no_update
         row = data[r]
         isin = row.get("isin")
         if not isin:
-            return no_update, no_update, no_update
+            return no_update, no_update
         isin_s = str(isin).strip()
-        sel = [r]
-        if cid in ("isin", "name", "ptf_w"):
-            return isin_s, None, sel
-        if isinstance(cid, str) and cid.startswith(WEIGHT_IN_PREFIX):
-            return isin_s, None, sel
-        if cid not in ptf_cols:
-            return isin_s, no_update, sel
-        if cid in FACTOR_SCORE_COLUMNS:
-            return isin_s, None, sel
-        return isin_s, cid, sel
+        return isin_s, [r]
 
-    return no_update, no_update, no_update
+    return no_update, no_update
 
 
 @callback(
     Output("ptf-selected-isin", "data", allow_duplicate=True),
-    Output("ptf-active-metric", "data", allow_duplicate=True),
     Input("ptf-table", "selected_rows"),
     State("ptf-table", "data"),
     State("ptf-selected-isin", "data"),
@@ -574,19 +627,19 @@ def _ptf_checkbox_row(
     data: list | None,
     cur_isin: str | None,
 ):
-    """Coche ligne uniquement : si ISIN inchangé (sync serveur), ne pas écraser la métrique active."""
+    """Coche ligne : changement d’ISIN uniquement (pas de métrique tableau)."""
     if not data or not selected_rows:
-        return no_update, no_update
+        return no_update
     r = int(selected_rows[0])
     if r < 0 or r >= len(data):
-        return no_update, no_update
+        return no_update
     isin = data[r].get("isin")
     if not isin:
-        return no_update, no_update
+        return no_update
     isin_s = str(isin).strip()
     if isin_s == str(cur_isin or "").strip():
-        return no_update, no_update
-    return isin_s, None
+        return no_update
+    return isin_s
 
 
 @callback(
@@ -640,8 +693,7 @@ def _ptf_drawer_seg_reset(isin, _nr):
 
 @callback(
     Output("ptf-panel-description", "className"),
-    Output("ptf-panel-industry", "className"),
-    Output("ptf-panel-indicators", "className"),
+    Output("ptf-panel-factors", "className"),
     Input("ptf-drawer-seg", "value"),
 )
 def _ptf_drawer_panels(tab):
@@ -651,7 +703,7 @@ def _ptf_drawer_panels(tab):
         b = "drawer-tab-panel"
         return f"{b} drawer-tab-panel--active" if tab == k else b
 
-    return one("description"), one("industry"), one("indicators")
+    return one("description"), one("factors")
 
 
 @callback(

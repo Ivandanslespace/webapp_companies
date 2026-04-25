@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import plotly.graph_objects as go
 import pandas as pd
-from dash import Input, Output, State, callback, clientside_callback, no_update, callback_context
+from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update, callback_context
 import dash_mantine_components as dmc
 
 from src.data.index_screen_repository import get_index_screen_repository
@@ -32,13 +32,14 @@ from src.callbacks.index_composition import (  # réutilise constantes + figures
     _is_bench_weight_col,
     build_company_factor_history_figure,
     build_peer_metric_figure,
+    history_bench_sector_slice,
+    _mm_cache_get,
+    _mm_cache_set,
+    _mm_ind_fig,
 )
 from src.services.drawer_figure_cache import (
     get_ind_factor_dict,
-    get_ind_metric_bundle,
-    ind_metric_cache_key,
     set_ind_factor,
-    set_ind_metric_bundle,
 )
 
 _MAX_IND_DETAIL = 20
@@ -98,7 +99,6 @@ def _ind_append_group(grp: str | None, cur: list | None, bench: str | None):
 
 @callback(
     Output("ind-selected-isin", "data"),
-    Output("ind-active-metric", "data"),
     Input("ind-ptf-name", "value"),
     Input("ind-ptf-bench", "value"),
     Input("ind-ptf-date", "value"),
@@ -113,7 +113,7 @@ def _ind_clear_stores_on_filter(
     _sector: str | None,
 ):
     """Réinitialise la sélection dès qu’un filtre (PTF, bench, date, colonnes, onglet) change."""
-    return None, None
+    return None
 
 
 @callback(
@@ -249,85 +249,97 @@ def _ind_factor_graphs(isin: str | None, bench: str | None, sector: str | None):
     return fig
 
 
+def _peer_metric_fig_ind(
+    isin: str, bench: str, sector: str, col: str, H: pd.DataFrame
+) -> go.Figure:
+    k = f"mm|ind|{isin}|{bench}|{sector}|{col}"
+    hit = _mm_cache_get(_mm_ind_fig, k)
+    if hit is not None:
+        return hit
+    fig, _t = build_peer_metric_figure(H, isin, col)
+    if fig.data:
+        fig.update_layout(title=col)
+    _mm_cache_set(_mm_ind_fig, k, fig)
+    return fig
+
+
 @callback(
-    Output("ind-graph-metric", "figure"),
-    Output("ind-metric-title", "children"),
+    Output("ind-metric-charts-wrap", "children"),
     Input("ind-selected-isin", "data"),
-    Input("ind-active-metric", "data"),
+    Input("ind-metric-multiselect", "value"),
     Input("ind-ptf-bench", "value"),
     Input("ind-icb-tabs", "value"),
 )
-def _ind_metric_graph(
+def _ind_metric_charts_wrap(
     isin: str | None,
-    active_m: str | None,
+    metrics: list | None,
     bench: str | None,
     sector: str | None,
 ):
-    empty_m = go.Figure()
-    if not isin or not bench or not sector:
-        return empty_m, "—"
+    if not isin or not bench or not sector or not metrics:
+        return []
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
-        return empty_m, "—"
-    key = ind_metric_cache_key(isin, bench, str(sector), active_m)
-    bundle = get_ind_metric_bundle(key)
-    if bundle is not None:
-        return bundle
-    H = ridx.history_for_index(bench)
+        return []
+    H_full = ridx.history_for_index(bench)
+    if H_full.empty:
+        return []
+    H = history_bench_sector_slice(H_full, str(sector))
     if H.empty:
-        return empty_m, "—"
-    fig, title = build_peer_metric_figure(H, isin, active_m)
-    set_ind_metric_bundle(key, fig, str(title))
-    return fig, title
+        return []
+    order = list(dict.fromkeys(str(m) for m in metrics if m))
+    isin_s = str(isin).strip()
+    sec_s = str(sector).strip()
+    blocks: list = []
+    for col in order:
+        if col not in H.columns or col in FACTOR_SCORE_COLUMNS:
+            continue
+        fig = _peer_metric_fig_ind(isin_s, bench, sec_s, col, H)
+        blocks.append(
+            html.Div(
+                dcc.Graph(figure=fig, config={"displaylogo": False}, style={"height": "380px"}),
+                style={"marginBottom": "20px"},
+            )
+        )
+    return blocks
 
 
 @callback(
     Output("ind-selected-isin", "data", allow_duplicate=True),
-    Output("ind-active-metric", "data", allow_duplicate=True),
+    Output("ind-ptf-table", "selected_rows", allow_duplicate=True),
     Input("ind-ptf-table", "active_cell"),
     Input("ind-ptf-table", "selected_rows"),
     State("ind-ptf-table", "data"),
-    State("ind-ptf-cols", "value"),
     prevent_initial_call=True,
 )
 def _ind_row_or_cell_selection(
     cell: dict | None,
     selected_rows: list | None,
     data: list | None,
-    ptf_cols: list | None,
 ):
-    """Priorité au clic sur une cellule ; sinon sélection de ligne (colonne d’index)."""
-    ptf_cols = ptf_cols or []
+    """ISIN + ligne sélectionnée ; la colonne cliquée ne pilote plus les métriques."""
     if not data:
         return no_update, no_update
     ids = [t["prop_id"] for t in (callback_context.triggered or [])]
     cell_event = any("active_cell" in p for p in ids)
     row_event = any("selected_rows" in p for p in ids)
 
-    if cell_event and cell and cell.get("row") is not None and cell.get("column_id") is not None:
-        r, cid = cell["row"], cell["column_id"]
-        if r is None or cid is None or r >= len(data):
+    if cell_event and cell and cell.get("row") is not None:
+        r = int(cell["row"])
+        if r < 0 or r >= len(data):
             return no_update, no_update
         row = data[r]
         isin = row.get("isin")
         if not isin:
             return no_update, no_update
-        if cid in ("isin", "name", "ptf_w"):
-            return isin, None
-        if isinstance(cid, str) and cid.startswith(WEIGHT_IN_PREFIX):
-            return isin, None
-        if cid not in ptf_cols:
-            return isin, no_update
-        if cid in FACTOR_SCORE_COLUMNS:
-            return isin, None
-        return isin, cid
+        return str(isin).strip(), [r]
 
     if row_event and selected_rows:
         r = int(selected_rows[0])
         if 0 <= r < len(data):
             isin = data[r].get("isin")
             if isin:
-                return isin, None
+                return str(isin).strip(), selected_rows
     return no_update, no_update
 
 
@@ -381,8 +393,7 @@ def _ind_drawer_seg_reset(isin, _nr):
 
 @callback(
     Output("ind-panel-description", "className"),
-    Output("ind-panel-industry", "className"),
-    Output("ind-panel-indicators", "className"),
+    Output("ind-panel-factors", "className"),
     Input("ind-drawer-seg", "value"),
 )
 def _ind_drawer_panels(tab):
@@ -392,7 +403,7 @@ def _ind_drawer_panels(tab):
         b = "drawer-tab-panel"
         return f"{b} drawer-tab-panel--active" if tab == k else b
 
-    return one("description"), one("industry"), one("indicators")
+    return one("description"), one("factors")
 
 
 @callback(

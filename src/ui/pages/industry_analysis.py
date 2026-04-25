@@ -8,6 +8,7 @@ from dash.dash_table import DataTable
 
 from config.settings import ICB_MAPPING_CSV
 from src.data.icb19_supersectors import icb_supersector_tab_label, load_icb19_supersector_labels
+from src.callbacks.index_composition import build_drawer_metric_multiselect_data
 from src.data.index_screen_repository import get_index_screen_repository
 from src.data.ptf_column_groups import default_summary_column_names, filter_groups_for_ciq
 from src.data.ptf_repository import get_ptf_repository
@@ -53,6 +54,7 @@ def layout() -> html.Div:
         for lab, c in g.entries:
             col_options.append({"label": f"{g.label} — {lab}", "value": c})
     group_add_opts = [{"value": g.id, "label": g.label} for g in groups]
+    metric_drawer_data = build_drawer_metric_multiselect_data(av, idx.df)
 
     icb_list = load_icb19_supersector_labels()
     default_icb = icb_list[0] if icb_list else None
@@ -68,7 +70,6 @@ def layout() -> html.Div:
         className="page-industry-icb",
         children=[
             dcc.Store(id="ind-selected-isin", data=None),
-            dcc.Store(id="ind-active-metric", data=None),
             dcc.Store(id="ind-drawer-open", data=False),
             dcc.Store(id="ind-drawer-scroll-helper", data=0),
             dmc.Title("Analyse sectorielle (ICB19 × indice × portefeuille)", order=2, c="#111827"),
@@ -172,6 +173,7 @@ def layout() -> html.Div:
                             columns=[],
                             page_size=25,
                             row_selectable="single",
+                            selected_rows=[],
                             active_cell=None,
                             cell_selectable=True,
                             sort_action="native",
@@ -233,8 +235,7 @@ def layout() -> html.Div:
                                     value="description",
                                     data=[
                                         {"label": "Description", "value": "description"},
-                                        {"label": "Historique facteurs", "value": "industry"},
-                                        {"label": "Indicateurs détaillés", "value": "indicators"},
+                                        {"label": "Facteurs & indicateurs", "value": "factors"},
                                     ],
                                     fullWidth=True,
                                 ),
@@ -262,9 +263,11 @@ def layout() -> html.Div:
                                         ],
                                     ),
                                     html.Div(
-                                        id="ind-panel-industry",
+                                        id="ind-panel-factors",
                                         className="drawer-tab-panel",
                                         children=[
+                                            dmc.Text("Facteurs & indicateurs", size="md", fw=700),
+                                            dmc.Space(h=6),
                                             dmc.Text(
                                                 "Historique des facteurs (société sélectionnée)",
                                                 size="sm",
@@ -281,31 +284,24 @@ def layout() -> html.Div:
                                                     style={"minHeight": "400px"},
                                                 ),
                                             ),
-                                        ],
-                                    ),
-                                    html.Div(
-                                        id="ind-panel-indicators",
-                                        className="drawer-tab-panel",
-                                        children=[
-                                            dcc.Loading(
-                                                type="circle",
-                                                delay_show=200,
-                                                color="#1E40AF",
-                                                children=dmc.Stack(
-                                                    gap="sm",
-                                                    children=[
-                                                        dmc.Text(
-                                                            id="ind-metric-title",
-                                                            children="Autre indicateur (cliquer une cellule hors facteurs)",
-                                                        ),
-                                                        dcc.Graph(
-                                                            id="ind-graph-metric",
-                                                            config={"displaylogo": False},
-                                                            style={"height": "400px"},
-                                                        ),
-                                                    ],
-                                                ),
+                                            dmc.Space(h=16),
+                                            dmc.Text(
+                                                "Indicateurs (pairs : même onglet ICB + bench ; gris = autres sociétés du secteur)",
+                                                size="sm",
+                                                fw=600,
                                             ),
+                                            dmc.Space(h=6),
+                                            dmc.MultiSelect(
+                                                id="ind-metric-multiselect",
+                                                label="Métriques à afficher (par groupe CIQ)",
+                                                data=metric_drawer_data,
+                                                value=[],
+                                                searchable=True,
+                                                clearable=True,
+                                                nothingFoundMessage="Aucune métrique",
+                                            ),
+                                            dmc.Space(h=12),
+                                            html.Div(id="ind-metric-charts-wrap"),
                                         ],
                                     ),
                                 ],

@@ -7,6 +7,7 @@ from dash import dcc, html
 from dash.dash_table import DataTable
 
 from src.data.index_screen_repository import get_index_screen_repository
+from src.callbacks.index_composition import build_drawer_metric_multiselect_data
 from src.data.ptf_column_groups import default_summary_column_names, filter_groups_for_ciq
 from src.data.ptf_repository import get_ptf_repository
 from src.data.schemas_ciq import (
@@ -51,13 +52,13 @@ def layout() -> html.Div:
         for lab, c in g.entries:
             col_options.append({"label": f"{g.label} — {lab}", "value": c})
     group_add_opts = [{"value": g.id, "label": g.label} for g in groups]
+    metric_drawer_data = build_drawer_metric_multiselect_data(av, idx.df)
 
     return html.Div(
         className="page-ptf-index",
         children=[
             # session：navigation hors page puis retour sans perdre filtres / société sélectionnée
             dcc.Store(id="ptf-selected-isin", data=None, storage_type="session"),
-            dcc.Store(id="ptf-active-metric", data=None, storage_type="session"),
             dcc.Store(id="ptf-drawer-open", data=False),
             dcc.Store(id="ptf-drawer-scroll-helper", data=0),
             dmc.Title("Portefeuille & comparaison sectorielle (bench)", order=2, c="#111827"),
@@ -211,8 +212,7 @@ def layout() -> html.Div:
                                     value="description",
                                     data=[
                                         {"label": "Description", "value": "description"},
-                                        {"label": "Historique facteurs", "value": "industry"},
-                                        {"label": "Indicateurs détaillés", "value": "indicators"},
+                                        {"label": "Facteurs & indicateurs", "value": "factors"},
                                     ],
                                     fullWidth=True,
                                 ),
@@ -240,9 +240,11 @@ def layout() -> html.Div:
                                         ],
                                     ),
                                     html.Div(
-                                        id="ptf-panel-industry",
+                                        id="ptf-panel-factors",
                                         className="drawer-tab-panel",
                                         children=[
+                                            dmc.Text("Facteurs & indicateurs", size="md", fw=700),
+                                            dmc.Space(h=6),
                                             dmc.Text(
                                                 "Historique des facteurs (société sélectionnée)",
                                                 size="sm",
@@ -259,31 +261,24 @@ def layout() -> html.Div:
                                                     style={"minHeight": "400px"},
                                                 ),
                                             ),
-                                        ],
-                                    ),
-                                    html.Div(
-                                        id="ptf-panel-indicators",
-                                        className="drawer-tab-panel",
-                                        children=[
-                                            dcc.Loading(
-                                                type="circle",
-                                                delay_show=200,
-                                                color="#1E40AF",
-                                                children=dmc.Stack(
-                                                    gap="sm",
-                                                    children=[
-                                                        dmc.Text(
-                                                            id="ptf-metric-title",
-                                                            children="Autre indicateur (cliquer une cellule hors facteurs)",
-                                                        ),
-                                                        dcc.Graph(
-                                                            id="ptf-graph-metric",
-                                                            config={"displaylogo": False},
-                                                            style={"height": "400px"},
-                                                        ),
-                                                    ],
-                                                ),
+                                            dmc.Space(h=16),
+                                            dmc.Text(
+                                                "Indicateurs détaillés (pairs même bench / secteur / région)",
+                                                size="sm",
+                                                fw=600,
                                             ),
+                                            dmc.Space(h=6),
+                                            dmc.MultiSelect(
+                                                id="ptf-metric-multiselect",
+                                                label="Métriques à afficher (par groupe CIQ)",
+                                                data=metric_drawer_data,
+                                                value=[],
+                                                searchable=True,
+                                                clearable=True,
+                                                nothingFoundMessage="Aucune métrique",
+                                            ),
+                                            dmc.Space(h=12),
+                                            html.Div(id="ptf-metric-charts-wrap"),
                                         ],
                                     ),
                                 ],
