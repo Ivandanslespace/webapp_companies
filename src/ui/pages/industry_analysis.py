@@ -69,6 +69,8 @@ def layout() -> html.Div:
         children=[
             dcc.Store(id="ind-selected-isin", data=None),
             dcc.Store(id="ind-active-metric", data=None),
+            dcc.Store(id="ind-drawer-open", data=False),
+            dcc.Store(id="ind-drawer-tab", data="description"),
             dmc.Title("Analyse sectorielle (ICB19 × indice × portefeuille)", order=2, c="#111827"),
             dmc.Text(
                 "Chaque sous-onglet correspond à un super-secteur ICB19 ; seules les sociétés "
@@ -191,76 +193,139 @@ def layout() -> html.Div:
                     style={"overflowX": "auto", "maxHeight": "520px", "overflowY": "auto"},
                 ),
             ),
-            dmc.Space(h=16),
-            dmc.Grid(
-                gutter="md",
+            html.Div(
+                id="ind-drawer-overlay",
+                className="drawer-overlay",
                 children=[
-                    dmc.GridCol(
-                        span={"base": 12, "lg": 9},
-                        children=dcc.Loading(
-                            type="circle",
-                            delay_show=200,
-                            color="#1E40AF",
-                            children=html.Div(id="ind-desc-wrap"),
-                        ),
+                    html.Button(
+                        id="ind-drawer-backdrop",
+                        className="drawer-backdrop",
+                        n_clicks=0,
+                        type="button",
+                        title="Fermer",
+                        **{"aria-label": "Fermer le panneau"},
                     ),
-                    dmc.GridCol(
-                        span={"base": 12, "lg": 3},
-                        children=dcc.Loading(
-                            type="circle",
-                            delay_show=200,
-                            color="#1E40AF",
-                            children=html.Div(id="ind-news-wrap"),
-                        ),
+                    html.Div(
+                        className="drawer-panel",
+                        children=[
+                            html.Div(
+                                className="drawer-panel-header",
+                                children=[
+                                    html.Div(
+                                        id="ind-drawer-header",
+                                        style={"flex": 1, "minWidth": 0},
+                                    ),
+                                    html.Button(
+                                        "×",
+                                        id="ind-drawer-close",
+                                        className="drawer-close",
+                                        n_clicks=0,
+                                        type="button",
+                                        title="Fermer",
+                                        **{"aria-label": "Fermer"},
+                                    ),
+                                ],
+                            ),
+                            html.Div(
+                                className="drawer-seg-wrap",
+                                children=dmc.SegmentedControl(
+                                    id="ind-drawer-seg",
+                                    value="description",
+                                    data=[
+                                        {"label": "Description", "value": "description"},
+                                        {"label": "Graphe industrie", "value": "industry"},
+                                        {"label": "Indicateurs détaillés", "value": "indicators"},
+                                    ],
+                                    fullWidth=True,
+                                ),
+                            ),
+                            html.Div(
+                                className="drawer-panel-body",
+                                children=[
+                                    html.Div(
+                                        id="ind-panel-description",
+                                        className="drawer-tab-panel drawer-tab-panel--active",
+                                        children=[
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=html.Div(id="ind-desc-wrap"),
+                                            ),
+                                            dmc.Space(h=12),
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=html.Div(id="ind-news-wrap"),
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="ind-panel-industry",
+                                        className="drawer-tab-panel",
+                                        children=[
+                                            dmc.Text(
+                                                "Scores (facteurs) — historique vs pairs bench",
+                                                size="sm",
+                                                fw=600,
+                                            ),
+                                            dmc.Space(h=8),
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=dcc.Graph(
+                                                    id="ind-graph-factors",
+                                                    config={"displaylogo": False},
+                                                    style={"minHeight": "400px"},
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="ind-panel-indicators",
+                                        className="drawer-tab-panel",
+                                        children=[
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=dmc.Stack(
+                                                    gap="sm",
+                                                    children=[
+                                                        dmc.Text(
+                                                            id="ind-metric-title",
+                                                            children="Autre indicateur (cliquer une cellule hors facteurs)",
+                                                        ),
+                                                        dcc.Graph(
+                                                            id="ind-graph-metric",
+                                                            config={"displaylogo": False},
+                                                            style={"height": "400px"},
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                        ],
                     ),
                 ],
             ),
-            dmc.Space(h=12),
-            dmc.Paper(
-                withBorder=True,
-                radius="md",
-                p="md",
-                children=dcc.Loading(
-                    type="circle",
-                    delay_show=200,
-                    color="#1E40AF",
-                    children=dmc.Stack(
-                        gap="sm",
-                        children=[
-                            dmc.Text("Scores (facteurs) — historique vs pairs bench", fw=600),
-                            dcc.Graph(
-                                id="ind-graph-factors",
-                                config={"displaylogo": False},
-                                style={"height": "1400px"},
-                            ),
-                        ],
+            html.Div(
+                id="ind-drawer-fab-wrap",
+                className="drawer-fab-wrap",
+                style={"display": "none"},
+                children=[
+                    dmc.Button(
+                        "Voir la fiche",
+                        id="ind-drawer-reopen",
+                        variant="filled",
+                        size="sm",
                     ),
-                ),
-            ),
-            dmc.Space(h=12),
-            dmc.Paper(
-                withBorder=True,
-                radius="md",
-                p="md",
-                children=dcc.Loading(
-                    type="circle",
-                    delay_show=200,
-                    color="#1E40AF",
-                    children=dmc.Stack(
-                        gap="sm",
-                        children=[
-                            dmc.Text(
-                                id="ind-metric-title",
-                                children="Autre indicateur (cliquer une cellule hors facteurs)",
-                            ),
-                            dcc.Graph(
-                                id="ind-graph-metric",
-                                config={"displaylogo": False},
-                                style={"height": "400px"},
-                            ),
-                        ],
-                    ),
-                ),
+                ],
             ),
         ],
     )

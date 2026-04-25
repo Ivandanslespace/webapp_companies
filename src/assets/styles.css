@@ -331,3 +331,116 @@ a.card-link, a.card-link:hover, a.card-link:visited {
 .ind-icb-tabs-bar {
   width: 100%;
 }
+
+/* Tiroir entreprise (Composition indice + Analyse ICB) */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 1, 1), visibility 0.22s step-end;
+}
+.drawer-overlay.drawer-overlay--open {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+}
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(72vw, 980px);
+  max-width: 100%;
+  background: var(--surface);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drawer-overlay.drawer-overlay--open .drawer-panel {
+  transform: translateX(0);
+}
+.drawer-overlay:not(.drawer-overlay--open) .drawer-panel {
+  transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1);
+}
+.drawer-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-panel-header .drawer-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.drawer-panel-header .drawer-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.drawer-panel .drawer-seg-wrap {
+  flex-shrink: 0;
+  padding: 12px 20px 0;
+}
+.drawer-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+.drawer-tab-panel {
+  display: none;
+}
+.drawer-tab-panel.drawer-tab-panel--active {
+  display: block;
+}
+.drawer-fab-wrap {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1999;
+}
+.drawer-fab-wrap .mantine-Button-root {
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+}
+@media (max-width: 1024px) {
+  .drawer-panel {
+    width: 78vw;
+  }
+}
+@media (max-width: 640px) {
+  .drawer-panel {
+    width: 100vw;
+  }
+  .drawer-fab-wrap {
+    right: 16px;
+    bottom: 16px;
+  }
+}

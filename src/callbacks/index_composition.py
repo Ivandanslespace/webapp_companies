@@ -1,6 +1,8 @@
 """Callbacks page PTF / bench (remplace l’ancien mode indice+metric)."""
 from __future__ import annotations
 
+from collections import OrderedDict
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
@@ -26,10 +28,35 @@ from src.services.peer_fan import peer_fan_timeseries
 from src.data.repository import get_repository
 from src.ui.components.description_panel import render_description_panel
 from src.ui.components.news_timeline import render_news_timeline
+from src.services.drawer_figure_cache import (
+    get_ptf_factor_dict,
+    get_ptf_metric_bundle,
+    ptf_factor_cache_key,
+    ptf_metric_cache_key,
+    set_ptf_factor,
+    set_ptf_metric_bundle,
+)
 
 _GRAY = "rgba(120,120,120,0.2)"
 _ACCENT = "#0F766E"
 _BLUE = "#1E40AF"
+
+_MAX_PTF_DETAIL = 20
+_ptf_detail_cache: OrderedDict[str, tuple] = OrderedDict()
+
+
+def _ptf_detail_cache_get(isin: str) -> tuple | None:
+    if isin not in _ptf_detail_cache:
+        return None
+    _ptf_detail_cache.move_to_end(isin)
+    return _ptf_detail_cache[isin]
+
+
+def _ptf_detail_cache_set(isin: str, desc, news_df) -> None:
+    news_c = news_df.copy() if hasattr(news_df, "copy") else news_df
+    _ptf_detail_cache[isin] = (desc, news_c)
+    while len(_ptf_detail_cache) > _MAX_PTF_DETAIL:
+        _ptf_detail_cache.popitem(last=False)
 
 
 def build_peer_factor_figure(H: pd.DataFrame, isin: str) -> go.Figure:
@@ -285,7 +312,7 @@ def _ptf_table(ptf: str | None, bench: str | None, date: str | None, cols: list 
     Input("ptf-selected-isin", "data"),
 )
 def _ptf_detail_panel(isin: str | None):
-    """Description + actualités (sans attendre les graphiques)."""
+    """Description + actualités (cache session Python par ISIN)."""
     if not isin:
         return (
             dmc.Text(
@@ -294,9 +321,14 @@ def _ptf_detail_panel(isin: str | None):
             ),
             dmc.Text("—", c="#6B7280"),
         )
-    repo = get_repository()
-    desc = repo.get_description(isin)
-    news = repo.get_news(isin)
+    hit = _ptf_detail_cache_get(isin)
+    if hit is None:
+        repo = get_repository()
+        desc = repo.get_description(isin)
+        news = repo.get_news(isin)
+        _ptf_detail_cache_set(isin, desc, news)
+    else:
+        desc, news = hit
     desc_c = (
         render_description_panel(desc) if desc is not None else dmc.Paper("—")
     )
@@ -316,10 +348,16 @@ def _ptf_factor_graphs(isin: str | None, bench: str | None):
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty
+    key = ptf_factor_cache_key(isin, bench)
+    hit = get_ptf_factor_dict(key)
+    if hit is not None:
+        return hit
     H = ridx.history_for_index(bench)
     if H.empty:
         return empty
-    return build_peer_factor_figure(H, isin)
+    fig = build_peer_factor_figure(H, isin)
+    set_ptf_factor(key, fig)
+    return fig
 
 
 @callback(
@@ -336,10 +374,16 @@ def _ptf_metric_graph(isin: str | None, active_m: str | None, bench: str | None)
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty_m, "—"
+    key = ptf_metric_cache_key(isin, bench, active_m)
+    bundle = get_ptf_metric_bundle(key)
+    if bundle is not None:
+        return bundle
     H = ridx.history_for_index(bench)
     if H.empty:
         return empty_m, "—"
-    return build_peer_metric_figure(H, isin, active_m)
+    fig, title = build_peer_metric_figure(H, isin, active_m)
+    set_ptf_metric_bundle(key, fig, str(title))
+    return fig, title
 
 
 def _row_index_for_isin(data: list | None, isin_s: str) -> list[int]:
@@ -438,3 +482,109 @@ def _ptf_checkbox_row(
     if isin_s == str(cur_isin or "").strip():
         return no_update, no_update
     return isin_s, None
+
+
+@callback(
+    Output("ptf-drawer-open", "data"),
+    Input("ptf-selected-isin", "data"),
+    Input("ptf-drawer-backdrop", "n_clicks"),
+    Input("ptf-drawer-close", "n_clicks"),
+    Input("ptf-drawer-reopen", "n_clicks"),
+)
+def _ptf_drawer_open(isin, _nb, _nc, _nr):
+    if not callback_context.triggered:
+        return False
+    tid = callback_context.triggered_id
+    if tid in ("ptf-drawer-backdrop", "ptf-drawer-close"):
+        return False
+    if tid == "ptf-drawer-reopen":
+        return bool(isin)
+    if tid == "ptf-selected-isin":
+        return bool(isin)
+    return False
+
+
+@callback(
+    Output("ptf-drawer-overlay", "className"),
+    Input("ptf-drawer-open", "data"),
+)
+def _ptf_drawer_overlay_class(open_):
+    base = "drawer-overlay"
+    return f"{base} drawer-overlay--open" if open_ else base
+
+
+@callback(
+    Output("ptf-drawer-fab-wrap", "style"),
+    Input("ptf-drawer-open", "data"),
+    Input("ptf-selected-isin", "data"),
+)
+def _ptf_drawer_fab_style(open_, isin):
+    show = bool(isin) and not open_
+    return {"display": "block" if show else "none"}
+
+
+@callback(
+    Output("ptf-drawer-tab", "data"),
+    Input("ptf-selected-isin", "data"),
+    Input("ptf-drawer-seg", "value"),
+    Input("ptf-drawer-reopen", "n_clicks"),
+)
+def _ptf_drawer_tab_store(isin, seg, _nr):
+    if not callback_context.triggered:
+        return "description"
+    tid = callback_context.triggered_id
+    if tid in ("ptf-selected-isin", "ptf-drawer-reopen"):
+        return "description"
+    if tid == "ptf-drawer-seg":
+        return seg if seg else "description"
+    return "description"
+
+
+@callback(
+    Output("ptf-drawer-seg", "value"),
+    Input("ptf-drawer-tab", "data"),
+    prevent_initial_call=True,
+)
+def _ptf_drawer_seg_sync(tab):
+    return tab if tab else "description"
+
+
+@callback(
+    Output("ptf-panel-description", "className"),
+    Output("ptf-panel-industry", "className"),
+    Output("ptf-panel-indicators", "className"),
+    Input("ptf-drawer-tab", "data"),
+)
+def _ptf_drawer_panels(tab):
+    tab = tab or "description"
+
+    def one(k: str) -> str:
+        b = "drawer-tab-panel"
+        return f"{b} drawer-tab-panel--active" if tab == k else b
+
+    return one("description"), one("industry"), one("indicators")
+
+
+@callback(
+    Output("ptf-drawer-header", "children"),
+    Input("ptf-selected-isin", "data"),
+    State("ptf-table", "data"),
+)
+def _ptf_drawer_header(isin, data):
+    if not isin:
+        return dmc.Text("—", size="sm", c="dimmed")
+    name = str(isin)
+    if data:
+        for r in data:
+            if str(r.get("isin", "")).strip() == str(isin).strip():
+                nm = r.get("name")
+                if nm:
+                    name = str(nm)
+                break
+    return dmc.Stack(
+        gap=4,
+        children=[
+            dmc.Text(name, fw=700, size="lg", lineClamp=3),
+            dmc.Text(str(isin), size="xs", c="dimmed", ff="monospace"),
+        ],
+    )

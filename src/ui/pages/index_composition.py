@@ -58,6 +58,8 @@ def layout() -> html.Div:
             # session：navigation hors page puis retour sans perdre filtres / société sélectionnée
             dcc.Store(id="ptf-selected-isin", data=None, storage_type="session"),
             dcc.Store(id="ptf-active-metric", data=None, storage_type="session"),
+            dcc.Store(id="ptf-drawer-open", data=False),
+            dcc.Store(id="ptf-drawer-tab", data="description"),
             dmc.Title("Portefeuille & comparaison sectorielle (bench)", order=2, c="#111827"),
             dmc.Space(h=12),
             dmc.Paper(
@@ -138,8 +140,8 @@ def layout() -> html.Div:
             ),
             dmc.Space(h=12),
             dmc.Text(
-                "Sélectionnez une ligne (case à gauche) pour afficher description, actualités et graphiques. "
-                "Fiche dédiée : ouvrir `/company/<ISIN>` dans un nouvel onglet depuis le catalogue ou en remplaçant l’ISIN.",
+                "Sélectionnez une ligne (case à gauche) : un panneau latéral s’ouvre avec description, actualités et graphiques. "
+                "Fiche dédiée : `/company/<ISIN>`.",
                 size="xs",
                 c="#6B7280",
             ),
@@ -169,76 +171,139 @@ def layout() -> html.Div:
                     style={"overflowX": "auto", "maxHeight": "480px", "overflowY": "auto"},
                 ),
             ),
-            dmc.Space(h=16),
-            dmc.Grid(
-                gutter="md",
+            html.Div(
+                id="ptf-drawer-overlay",
+                className="drawer-overlay",
                 children=[
-                    dmc.GridCol(
-                        span={"base": 12, "lg": 9},
-                        children=dcc.Loading(
-                            type="circle",
-                            delay_show=200,
-                            color="#1E40AF",
-                            children=html.Div(id="ptf-desc-wrap"),
-                        ),
+                    html.Button(
+                        id="ptf-drawer-backdrop",
+                        className="drawer-backdrop",
+                        n_clicks=0,
+                        type="button",
+                        title="Fermer",
+                        **{"aria-label": "Fermer le panneau"},
                     ),
-                    dmc.GridCol(
-                        span={"base": 12, "lg": 3},
-                        children=dcc.Loading(
-                            type="circle",
-                            delay_show=200,
-                            color="#1E40AF",
-                            children=html.Div(id="ptf-news-wrap"),
-                        ),
+                    html.Div(
+                        className="drawer-panel",
+                        children=[
+                            html.Div(
+                                className="drawer-panel-header",
+                                children=[
+                                    html.Div(
+                                        id="ptf-drawer-header",
+                                        style={"flex": 1, "minWidth": 0},
+                                    ),
+                                    html.Button(
+                                        "×",
+                                        id="ptf-drawer-close",
+                                        className="drawer-close",
+                                        n_clicks=0,
+                                        type="button",
+                                        title="Fermer",
+                                        **{"aria-label": "Fermer"},
+                                    ),
+                                ],
+                            ),
+                            html.Div(
+                                className="drawer-seg-wrap",
+                                children=dmc.SegmentedControl(
+                                    id="ptf-drawer-seg",
+                                    value="description",
+                                    data=[
+                                        {"label": "Description", "value": "description"},
+                                        {"label": "Graphe industrie", "value": "industry"},
+                                        {"label": "Indicateurs détaillés", "value": "indicators"},
+                                    ],
+                                    fullWidth=True,
+                                ),
+                            ),
+                            html.Div(
+                                className="drawer-panel-body",
+                                children=[
+                                    html.Div(
+                                        id="ptf-panel-description",
+                                        className="drawer-tab-panel drawer-tab-panel--active",
+                                        children=[
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=html.Div(id="ptf-desc-wrap"),
+                                            ),
+                                            dmc.Space(h=12),
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=html.Div(id="ptf-news-wrap"),
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="ptf-panel-industry",
+                                        className="drawer-tab-panel",
+                                        children=[
+                                            dmc.Text(
+                                                "Scores (facteurs) — historique vs pairs bench",
+                                                size="sm",
+                                                fw=600,
+                                            ),
+                                            dmc.Space(h=8),
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=dcc.Graph(
+                                                    id="ptf-graph-factors",
+                                                    config={"displaylogo": False},
+                                                    style={"minHeight": "400px"},
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="ptf-panel-indicators",
+                                        className="drawer-tab-panel",
+                                        children=[
+                                            dcc.Loading(
+                                                type="circle",
+                                                delay_show=200,
+                                                color="#1E40AF",
+                                                children=dmc.Stack(
+                                                    gap="sm",
+                                                    children=[
+                                                        dmc.Text(
+                                                            id="ptf-metric-title",
+                                                            children="Autre indicateur (cliquer une cellule hors facteurs)",
+                                                        ),
+                                                        dcc.Graph(
+                                                            id="ptf-graph-metric",
+                                                            config={"displaylogo": False},
+                                                            style={"height": "400px"},
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                        ],
                     ),
                 ],
             ),
-            dmc.Space(h=12),
-            dmc.Paper(
-                withBorder=True,
-                radius="md",
-                p="md",
-                children=dcc.Loading(
-                    type="circle",
-                    delay_show=200,
-                    color="#1E40AF",
-                    children=dmc.Stack(
-                        gap="sm",
-                        children=[
-                            dmc.Text("Scores (facteurs) — historique vs pairs bench", fw=600),
-                            dcc.Graph(
-                                id="ptf-graph-factors",
-                                config={"displaylogo": False},
-                                style={"height": "1400px"},
-                            ),
-                        ],
+            html.Div(
+                id="ptf-drawer-fab-wrap",
+                className="drawer-fab-wrap",
+                style={"display": "none"},
+                children=[
+                    dmc.Button(
+                        "Voir la fiche",
+                        id="ptf-drawer-reopen",
+                        variant="filled",
+                        size="sm",
                     ),
-                ),
-            ),
-            dmc.Space(h=12),
-            dmc.Paper(
-                withBorder=True,
-                radius="md",
-                p="md",
-                children=dcc.Loading(
-                    type="circle",
-                    delay_show=200,
-                    color="#1E40AF",
-                    children=dmc.Stack(
-                        gap="sm",
-                        children=[
-                            dmc.Text(
-                                id="ptf-metric-title",
-                                children="Autre indicateur (cliquer une cellule hors facteurs)",
-                            ),
-                            dcc.Graph(
-                                id="ptf-graph-metric",
-                                config={"displaylogo": False},
-                                style={"height": "400px"},
-                            ),
-                        ],
-                    ),
-                ),
+                ],
             ),
         ],
     )
