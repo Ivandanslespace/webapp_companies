@@ -237,7 +237,7 @@ def _ind_factor_graphs(isin: str | None, bench: str | None, sector: str | None):
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty
-    key = f"sf|{isin}|{bench}|{sector}"
+    key = f"sf3|{isin}|{bench}|{sector}"
     hit = get_ind_factor_dict(key)
     if hit is not None:
         return hit

@@ -85,7 +85,7 @@ def _ptf_detail_cache_set(isin: str, desc, news_df) -> None:
 
 
 def _synthetic_multifactor_at_row(row: pd.Series) -> float:
-    """Moyenne des 5 bases disponibles ; NaN si < 3 valeurs numériques (ML exclu)."""
+    """Moyenne des 5 bases (ML exclu) ; MOM ramené à l’échelle ~0–10 comme sur le tracé."""
     vals: list[float] = []
     for c in _BASE_COLS_SYNTH_MULTIFACTOR:
         if c not in row.index:
@@ -93,10 +93,14 @@ def _synthetic_multifactor_at_row(row: pd.Series) -> float:
         v = row[c]
         if v is not None and not (isinstance(v, float) and pd.isna(v)):
             try:
-                vals.append(float(v))
+                fv = float(v)
             except (TypeError, ValueError):
-                pass
-    if len(vals) < 3:
+                continue
+            if c == "MOM Score":
+                fv = fv / 10.0
+            vals.append(fv)
+    # Au moins 2 bases : avec l’ancien seuil à 3, beaucoup de dates CIQ restaient NaN → pas de trace MultiFactor.
+    if len(vals) < 2:
         return float("nan")
     return sum(vals) / len(vals)
 
@@ -159,16 +163,19 @@ def build_company_factor_history_figure(H: pd.DataFrame, isin: str) -> go.Figure
             continue
         color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
         color_i += 1
+        # Affichage seul : MOM Score source ~0–100 → tracé ~0–10 (données agrégées inchangées ailleurs).
+        y_plot = (ser / 10.0).values if label == "Momentum" else ser.values
         fig.add_trace(
             go.Scattergl(
                 x=ser.index,
-                y=ser.values,
+                y=y_plot,
                 mode="lines",
                 name=label,
                 line={"color": color, "width": 2},
             )
         )
-    if _COL_MULTIFACTOR in agg.columns and agg[_COL_MULTIFACTOR].notna().any():
+    mf_added = False
+    if _COL_MULTIFACTOR in agg.columns:
         ser_m = agg[_COL_MULTIFACTOR].dropna()
         if not ser_m.empty:
             color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
@@ -182,11 +189,12 @@ def build_company_factor_history_figure(H: pd.DataFrame, isin: str) -> go.Figure
                     line={"color": color, "width": 2.5},
                 )
             )
-    else:
-        synth = agg.apply(_synthetic_multifactor_at_row, axis=1)
-        synth = synth.dropna()
+            mf_added = True
+    if not mf_added:
+        synth = agg.apply(_synthetic_multifactor_at_row, axis=1).dropna()
         if not synth.empty:
             color = _FACTOR_TRACE_COLORS[color_i % len(_FACTOR_TRACE_COLORS)]
+            color_i += 1
             fig.add_trace(
                 go.Scattergl(
                     x=synth.index,
@@ -445,7 +453,7 @@ def _ptf_factor_graphs(isin: str | None, bench: str | None):
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
         return empty
-    key = f"sf|{isin}|{bench}"
+    key = f"sf3|{isin}|{bench}"
     hit = get_ptf_factor_dict(key)
     if hit is not None:
         return hit
