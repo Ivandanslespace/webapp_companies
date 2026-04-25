@@ -306,17 +306,18 @@ def _drawer_metric_col_ok(col: str, av: set[str], df: pd.DataFrame) -> bool:
 
 
 def build_drawer_metric_multiselect_data(av: set[str], df: pd.DataFrame) -> list[dict]:
-    """Options groupées pour Mantine MultiSelect : ``[{group, items:[{value,label},...]}, ...]``."""
+    """Liste plate ``{value, label}`` — même contrat que les autres MultiSelect du projet.
+
+    Le format imbriqué ``{group, items}`` n’est pas rendu correctement par dmc 0.14 / Mantine 7
+    côté client (menu vide) ; le groupe est préfixé dans le libellé.
+    """
     groups = filter_groups_for_ciq(av)
     out: list[dict] = []
     for g in groups:
-        items: list[dict] = []
         for lab, c in g.entries:
             if not _drawer_metric_col_ok(c, av, df):
                 continue
-            items.append({"value": c, "label": lab})
-        if items:
-            out.append({"group": g.label, "items": items})
+            out.append({"value": c, "label": f"{g.label} — {lab}"})
     return out
 
 
@@ -688,6 +689,13 @@ def _ptf_drawer_fab_style(open_, isin):
 )
 def _ptf_drawer_seg_reset(isin, _nr):
     """Réinitialise l’onglet ; pas d’Input sur la value du seg (évite cycle tab ↔ seg)."""
+    return "Description"
+
+
+def drawer_tab_key(seg_value: str | None) -> str:
+    """Libellés du SegmentedControl drawer → clés panneau internes description|factors."""
+    if seg_value == "Facteurs & indicateurs":
+        return "factors"
     return "description"
 
 
@@ -697,11 +705,11 @@ def _ptf_drawer_seg_reset(isin, _nr):
     Input("ptf-drawer-seg", "value"),
 )
 def _ptf_drawer_panels(tab):
-    tab = tab or "description"
+    t = drawer_tab_key(tab)
 
     def one(k: str) -> str:
         b = "drawer-tab-panel"
-        return f"{b} drawer-tab-panel--active" if tab == k else b
+        return f"{b} drawer-tab-panel--active" if t == k else b
 
     return one("description"), one("factors")
 

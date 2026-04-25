@@ -61,7 +61,12 @@ def layout() -> html.Div:
             dcc.Store(id="ptf-selected-isin", data=None, storage_type="session"),
             dcc.Store(id="ptf-drawer-open", data=False),
             dcc.Store(id="ptf-drawer-scroll-helper", data=0),
-            dmc.Title("Portefeuille & comparaison sectorielle (bench)", order=2, c="#111827"),
+            dmc.Text(
+                "Portefeuille & comparaison sectorielle (bench)",
+                size="xl",
+                fw=700,
+                c="#111827",
+            ),
             dmc.Space(h=12),
             dmc.Paper(
                 withBorder=True,
@@ -209,11 +214,8 @@ def layout() -> html.Div:
                                 className="drawer-seg-wrap",
                                 children=dmc.SegmentedControl(
                                     id="ptf-drawer-seg",
-                                    value="description",
-                                    data=[
-                                        {"label": "Description", "value": "description"},
-                                        {"label": "Facteurs & indicateurs", "value": "factors"},
-                                    ],
+                                    value="Description",
+                                    data=["Description", "Facteurs & indicateurs"],
                                     fullWidth=True,
                                 ),
                             ),
@@ -276,6 +278,7 @@ def layout() -> html.Div:
                                                 searchable=True,
                                                 clearable=True,
                                                 nothingFoundMessage="Aucune métrique",
+                                                comboboxProps={"zIndex": 5000},
                                             ),
                                             dmc.Space(h=12),
                                             html.Div(id="ptf-metric-charts-wrap"),

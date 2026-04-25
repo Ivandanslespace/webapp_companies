@@ -72,7 +72,12 @@ def layout() -> html.Div:
             dcc.Store(id="ind-selected-isin", data=None),
             dcc.Store(id="ind-drawer-open", data=False),
             dcc.Store(id="ind-drawer-scroll-helper", data=0),
-            dmc.Title("Analyse sectorielle (ICB19 × indice × portefeuille)", order=2, c="#111827"),
+            dmc.Text(
+                "Analyse sectorielle (ICB19 × indice × portefeuille)",
+                size="xl",
+                fw=700,
+                c="#111827",
+            ),
             dmc.Text(
                 "Chaque sous-onglet correspond à un super-secteur ICB19 ; seules les sociétés "
                 "dans ce secteur et avec un poids strictement positif dans l’indice choisi sont affichées. "
@@ -232,11 +237,8 @@ def layout() -> html.Div:
                                 className="drawer-seg-wrap",
                                 children=dmc.SegmentedControl(
                                     id="ind-drawer-seg",
-                                    value="description",
-                                    data=[
-                                        {"label": "Description", "value": "description"},
-                                        {"label": "Facteurs & indicateurs", "value": "factors"},
-                                    ],
+                                    value="Description",
+                                    data=["Description", "Facteurs & indicateurs"],
                                     fullWidth=True,
                                 ),
                             ),
@@ -299,6 +301,7 @@ def layout() -> html.Div:
                                                 searchable=True,
                                                 clearable=True,
                                                 nothingFoundMessage="Aucune métrique",
+                                                comboboxProps={"zIndex": 5000},
                                             ),
                                             dmc.Space(h=12),
                                             html.Div(id="ind-metric-charts-wrap"),

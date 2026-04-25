@@ -74,7 +74,7 @@ def layout(isin: str | None = None, **_kwargs) -> html.Div:
                     dmc.Stack(
                         gap=4,
                         children=[
-                            dmc.Title(identity.name, order=2, c="#111827"),
+                            dmc.Text(identity.name, size="xl", fw=700, c="#111827"),
                             dmc.Text(
                                 identity.isin,
                                 size="sm",

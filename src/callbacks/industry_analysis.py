@@ -32,6 +32,7 @@ from src.callbacks.index_composition import (  # réutilise constantes + figures
     _is_bench_weight_col,
     build_company_factor_history_figure,
     build_peer_metric_figure,
+    drawer_tab_key,
     history_bench_sector_slice,
     _mm_cache_get,
     _mm_cache_set,
@@ -388,7 +389,7 @@ def _ind_drawer_fab_style(open_, isin):
     Input("ind-drawer-reopen", "n_clicks"),
 )
 def _ind_drawer_seg_reset(isin, _nr):
-    return "description"
+    return "Description"
 
 
 @callback(
@@ -397,11 +398,11 @@ def _ind_drawer_seg_reset(isin, _nr):
     Input("ind-drawer-seg", "value"),
 )
 def _ind_drawer_panels(tab):
-    tab = tab or "description"
+    t = drawer_tab_key(tab)
 
     def one(k: str) -> str:
         b = "drawer-tab-panel"
-        return f"{b} drawer-tab-panel--active" if tab == k else b
+        return f"{b} drawer-tab-panel--active" if t == k else b
 
     return one("description"), one("factors")
 

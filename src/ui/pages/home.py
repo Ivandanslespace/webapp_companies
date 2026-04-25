@@ -36,9 +36,10 @@ def layout() -> html.Div:
                                         justify="space-between",
                                         align="center",
                                         children=[
-                                            dmc.Title(
+                                            dmc.Text(
                                                 "Catalogue des entreprises",
-                                                order=2,
+                                                size="xl",
+                                                fw=700,
                                                 c="#111827",
                                             ),
                                             dmc.Text(
