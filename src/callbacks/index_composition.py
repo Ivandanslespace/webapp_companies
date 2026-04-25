@@ -120,7 +120,7 @@ def _ptf_table(ptf: str | None, bench: str | None, date: str | None, cols: list 
     ciq = idx.df
     ciq_d = ciq[ciq[CIQ_COL_DATE] == asof]
     extra = [c for c in cols if c in ciq.columns]
-    merged = merge_ptf_ciq(hold, ciq_d, extra)
+    merged = merge_ptf_ciq(hold, ciq_d, extra, ciq_full=ciq)
     disp = ["isin", "name", "ptf_w"] + [c for c in extra if c not in ("isin", "name")]
     disp = [x for i, x in enumerate(disp) if x not in disp[:i]]
     for c in extra:

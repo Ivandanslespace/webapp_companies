@@ -15,14 +15,38 @@ def merge_ptf_ciq(
     holdings: pd.DataFrame,
     ciq_asof: pd.DataFrame,
     extra_ciq_columns: list[str],
+    ciq_full: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """``holdings`` : ISIN, Weight (PTF). ``ciq_asof`` : une date, une ligne par ISIN du bench."""
+    """``holdings`` : ISIN, Weight (PTF). ``ciq_asof`` : une date, une ligne par ISIN du bench.
+    ``ciq_full`` : historique CIQ pour combler ``name`` si absent au snapshot ``asof``.
+    """
     h = holdings.rename(
         columns={PTF_COL_ISIN: "isin", PTF_COL_WEIGHT: "ptf_w"}
     )
-    c = ciq_asof[[CIQ_COL_ISIN, CIQ_COL_NAME] + [c for c in extra_ciq_columns if c in ciq_asof.columns]].copy()
+    c = ciq_asof[
+        [CIQ_COL_ISIN, CIQ_COL_NAME]
+        + [col for col in extra_ciq_columns if col in ciq_asof.columns]
+    ].copy()
     c = c.rename(columns={CIQ_COL_ISIN: "isin", CIQ_COL_NAME: "name"})
     out = h.merge(c, on="isin", how="left")
+
+    mask_missing = out["name"].isna() | (out["name"].astype(str).str.strip() == "")
+    if mask_missing.any() and ciq_full is not None and not ciq_full.empty:
+        need = {CIQ_COL_ISIN, CIQ_COL_DATE, CIQ_COL_NAME}
+        if need.issubset(ciq_full.columns):
+            fallback = (
+                ciq_full[[CIQ_COL_ISIN, CIQ_COL_DATE, CIQ_COL_NAME]]
+                .dropna(subset=[CIQ_COL_NAME])
+                .sort_values(CIQ_COL_DATE)
+                .drop_duplicates(subset=[CIQ_COL_ISIN], keep="last")
+                .rename(
+                    columns={CIQ_COL_ISIN: "isin", CIQ_COL_NAME: "name_fallback"}
+                )
+            )
+            out = out.merge(fallback[["isin", "name_fallback"]], on="isin", how="left")
+            out.loc[mask_missing, "name"] = out.loc[mask_missing, "name_fallback"]
+            out = out.drop(columns=["name_fallback"])
+
     return out
 
 
