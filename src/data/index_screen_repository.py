@@ -7,6 +7,7 @@ Upper layers (services, callbacks, UI) should only talk to this repository.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Optional
 
 import pandas as pd
@@ -36,6 +37,15 @@ class IndexScreenRepository:
 
     def __init__(self) -> None:
         self._df: pd.DataFrame = loaders.load_screen_aggregate_ciq()
+        # Cache CPU : historique bench par colonne de poids (données immuables en mémoire)
+        @lru_cache(maxsize=64)
+        def _memo_history(wcol: str) -> pd.DataFrame:
+            if wcol not in self._df.columns:
+                return self._df.iloc[0:0].copy()
+            mask = self._df[wcol].fillna(0) > 0
+            return self._df.loc[mask].copy()
+
+        self._history_for_index_memo = _memo_history
 
     @property
     def df(self) -> pd.DataFrame:
@@ -88,10 +98,7 @@ class IndexScreenRepository:
 
     def history_for_index(self, weight_col: str) -> pd.DataFrame:
         """All rows where the given index weight > 0 (all dates)."""
-        if weight_col not in self._df.columns:
-            return self._df.iloc[0:0].copy()
-        mask = self._df[weight_col].fillna(0) > 0
-        return self._df.loc[mask].copy()
+        return self._history_for_index_memo(weight_col)
 
     def get_identity(self, isin: str) -> Optional[pd.Series]:
         """Latest row for a given ISIN (for labels)."""

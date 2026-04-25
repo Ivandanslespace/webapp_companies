@@ -10,7 +10,6 @@ from src.data.repository import get_repository
 from src.data.schemas import (
     COL_BODY,
     COL_COUNTRY,
-    COL_DATE,
     COL_ISIN,
     COL_NAME,
     COL_SECTOR,
@@ -20,16 +19,10 @@ from src.ui.components.company_card import render_company_card
 
 
 def _enrich_with_latest_description(catalog: pd.DataFrame) -> pd.DataFrame:
-    """Join each catalog row with its most recent DES body for preview."""
-    repo = get_repository()
-    des = repo._des  # read-only access within the data boundary
-
-    latest = (
-        des.sort_values(COL_DATE, ascending=False)
-        .drop_duplicates(subset=[COL_ISIN], keep="first")
-        [[COL_ISIN, COL_BODY]]
+    """Joint le catalogue avec le dernier DES (précalculé dans CompanyRepository)."""
+    return catalog.merge(
+        get_repository().latest_des_preview(), on=COL_ISIN, how="left"
     )
-    return catalog.merge(latest, on=COL_ISIN, how="left")
 
 
 @callback(

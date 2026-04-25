@@ -13,6 +13,7 @@ import pandas as pd
 
 from src.data import loaders
 from src.data.schemas import (
+    COL_BODY,
     COL_COUNTRY,
     COL_DATE,
     COL_ISIN,
@@ -63,6 +64,12 @@ class CompanyRepository:
         self._des: pd.DataFrame = loaders.load_des()
         self._news: pd.DataFrame = loaders.load_news()
         self._ciq_sector_by_isin: dict[str, str] = _latest_ciq_supersector_by_isin()
+        # Aperçu carte accueil : une fois par processus (évite tri/dedup à chaque pagination)
+        self._latest_des_preview: pd.DataFrame = (
+            self._des.sort_values(COL_DATE, ascending=False)
+            .drop_duplicates(subset=[COL_ISIN], keep="first")[[COL_ISIN, COL_BODY]]
+            .reset_index(drop=True)
+        )
 
     # --- Reference data (for filter dropdowns) ---
     def list_countries(self) -> list[str]:
@@ -72,6 +79,10 @@ class CompanyRepository:
         return sorted(self.companies_df()[COL_SECTOR].dropna().unique().tolist())
 
     # --- Company catalog (one row per ISIN, built from DES) ---
+    def latest_des_preview(self) -> pd.DataFrame:
+        """ISIN + dernier corps DES (markdown) pour fusion catalogue / cartes."""
+        return self._latest_des_preview
+
     def companies_df(self) -> pd.DataFrame:
         """Return one canonical row per company with identity columns only."""
         cols = [COL_ISIN, COL_NAME, COL_COUNTRY, COL_SECTOR]

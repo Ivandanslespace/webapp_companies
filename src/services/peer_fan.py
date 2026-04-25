@@ -31,33 +31,30 @@ def _anchor_industry_key(r: pd.Series) -> Optional[tuple[str, str]]:
     return None
 
 
-def _peers_on_date(
-    sub: pd.DataFrame,
-    anchor_isin: str,
-) -> tuple[Optional[object], Optional[str], set[str]]:
-    """(clef_ignorée, seau_région, isins_pairs) ; pairs = même industrie (col. alignée) + même seau + bench."""
+def _peer_row_mask(
+    sub: pd.DataFrame, anchor_isin: str
+) -> tuple[Optional[tuple[str, str]], Optional[str], pd.Series]:
+    """Masque booléen (index ``sub``) : lignes pairs même industrie (col. ancre) + même seau région."""
+    empty = pd.Series(False, index=sub.index, dtype=bool)
     arow = sub[sub[CIQ_COL_ISIN] == anchor_isin]
     if arow.empty:
-        return None, None, set()
+        return None, None, empty
     r0 = arow.iloc[0]
     ind_key = _anchor_industry_key(r0)
     if ind_key is None:
-        return None, None, set()
+        return None, None, empty
     col, val = ind_key
     if col not in sub.columns:
-        return None, None, set()
+        return ind_key, None, empty
     buck = region_bucket_value(r0.get(CIQ_COL_REGION))
-    s: set[str] = set()
-    for _, r in sub.iterrows():
-        if r[CIQ_COL_ISIN] == anchor_isin:
-            continue
-        rv = r.get(col)
-        if pd.isna(rv) or str(rv).strip().lower() != val:
-            continue
-        if region_bucket_value(r.get(CIQ_COL_REGION)) != buck:
-            continue
-        s.add(str(r[CIQ_COL_ISIN]))
-    return ind_key, buck, s
+    colv = sub[col]
+    m_ind = colv.notna() & (colv.astype(str).str.strip().str.lower() == val)
+    reg_buckets = sub[CIQ_COL_REGION].map(region_bucket_value)
+    m_reg = reg_buckets == buck
+    ais = str(anchor_isin).strip()
+    m_not_anchor = sub[CIQ_COL_ISIN].astype(str).str.strip() != ais
+    peer_mask = m_ind & m_reg & m_not_anchor
+    return ind_key, buck, peer_mask
 
 
 def peer_fan_timeseries(
@@ -81,38 +78,39 @@ def peer_fan_timeseries(
     H = H.dropna(subset=[CIQ_COL_DATE])
 
     dates = sorted(H[CIQ_COL_DATE].unique())
-    peer_dates: dict[str, list[tuple[pd.Timestamp, float]]] = {}
-    peer_union: set[str] = set()
+    chunks: list[pd.DataFrame] = []
 
     for d in dates:
         sub = H[H[CIQ_COL_DATE] == d]
-        _i, _b, peers = _peers_on_date(sub, anchor_isin)
-        if not peers:
+        _i, _b, peer_mask = _peer_row_mask(sub, anchor_isin)
+        if not peer_mask.any():
             continue
-        peer_union |= peers
-        for pid in peers:
-            gr = sub[sub[CIQ_COL_ISIN] == pid]
-            if gr.empty:
-                continue
-            v = gr.iloc[0].get(metric_col)
-            if v is None or (isinstance(v, float) and pd.isna(v)):
-                continue
-            peer_dates.setdefault(pid, []).append((pd.Timestamp(d), float(v)))
-
-    if len(peer_union) > MAX_PEER_TRACES:
-        rng = random.Random(seed)
-        peer_list = sorted(peer_union)
-        keep = set(rng.sample(peer_list, MAX_PEER_TRACES))
-        peer_dates = {k: v for k, v in peer_dates.items() if k in keep}
+        pr = sub.loc[peer_mask, [CIQ_COL_ISIN, metric_col]].copy()
+        pr = pr.dropna(subset=[metric_col])
+        if pr.empty:
+            continue
+        pr[CIQ_COL_ISIN] = pr[CIQ_COL_ISIN].astype(str).str.strip()
+        pr["_dt"] = pd.Timestamp(d)
+        pr["_v"] = pd.to_numeric(pr[metric_col], errors="coerce")
+        pr = pr.dropna(subset=["_v"])
+        if pr.empty:
+            continue
+        chunks.append(pr[[CIQ_COL_ISIN, "_dt", "_v"]])
 
     out_peers: dict[str, pd.Series] = {}
-    for pid, pairs in peer_dates.items():
-        if not pairs:
-            continue
-        pairs = sorted(pairs, key=lambda x: x[0])
-        idx = [p[0] for p in pairs]
-        vals = [p[1] for p in pairs]
-        out_peers[pid] = pd.Series(vals, index=pd.DatetimeIndex(idx))
+    if chunks:
+        big = pd.concat(chunks, ignore_index=True)
+        u = big[CIQ_COL_ISIN].unique().tolist()
+        if len(u) > MAX_PEER_TRACES:
+            rng = random.Random(seed)
+            keep = set(rng.sample(sorted(u), MAX_PEER_TRACES))
+            big = big[big[CIQ_COL_ISIN].isin(keep)]
+        for pid, g in big.groupby(CIQ_COL_ISIN, sort=False):
+            g = g.sort_values("_dt")
+            out_peers[str(pid)] = pd.Series(
+                g["_v"].to_numpy(dtype=float, copy=False),
+                index=pd.DatetimeIndex(g["_dt"]),
+            )
 
     arows = H[H[CIQ_COL_ISIN] == anchor_isin][[CIQ_COL_DATE, metric_col]].dropna(
         subset=[metric_col]
