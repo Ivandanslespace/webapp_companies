@@ -1,0 +1,11 @@
+"""Callback registration entry point.
+
+Import side effects register callbacks with the current Dash app.
+"""
+from __future__ import annotations
+
+from src.callbacks import home as _home  # noqa: F401
+from src.callbacks import index_composition as _idx  # noqa: F401
+from src.callbacks import industry_analysis as _ind2  # noqa: F401
+
+__all__ = ["_home", "_idx", "_ind2"]

@@ -1,0 +1,325 @@
+/* Global light-theme polish on top of dash-mantine-components */
+
+:root {
+  --app-bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --primary: #1E40AF;
+  --accent: #0F766E;
+  --text: #111827;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+}
+
+html, body {
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 全宽占满视口，减少四周留白 */
+.app-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 主内容区：全宽，仅保留窄内边距避免贴边裁切 */
+.app-main {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 10px 12px 20px 12px;
+  box-sizing: border-box;
+}
+
+/* Company card hover feedback */
+.company-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  height: 100%;
+}
+.company-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+  border-color: var(--primary) !important;
+}
+
+/* Remove underline on card links */
+a.card-link, a.card-link:hover, a.card-link:visited {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  height: 100%;
+}
+
+/* Navbar baseline */
+.app-navbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Readable measure for long-form Markdown (DES + NEWS) */
+.markdown-prose {
+  max-width: 72ch;
+}
+
+/*
+  Long-form scroll: use native overflow. Mantine ScrollArea often needs an
+  explicit viewport height; maxHeight-only can clip Markdown without enabling scroll.
+*/
+.markdown-scroll-region {
+  box-sizing: border-box;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+}
+.markdown-scroll-region--des {
+  max-height: min(70vh, 780px);
+}
+.markdown-scroll-region--news {
+  max-height: min(55vh, 520px);
+}
+
+/* Accordion body may use overflow:hidden; inner region must own the scroll + height cap. */
+.news-item [class*="ccordion-panel"] {
+  overflow: visible !important;
+}
+
+/* Markdown content readability */
+.markdown-body {
+  line-height: 1.72;
+  color: var(--text);
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.markdown-body :first-child {
+  margin-top: 0;
+}
+.markdown-body h1,
+.markdown-body h2 {
+  color: var(--primary);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin-top: 1.35em;
+  margin-bottom: 0.45em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+.markdown-body h3 {
+  color: #1f2937;
+  font-weight: 650;
+  margin-top: 1.15em;
+  margin-bottom: 0.4em;
+  font-size: 1.05rem;
+  border-left: 3px solid var(--border);
+  padding-left: 0.5rem;
+}
+.markdown-body h4:not(.md-subhead) {
+  color: var(--text);
+  font-weight: 650;
+  margin-top: 1.1em;
+  margin-bottom: 0.35em;
+}
+/* Letter rubrics a)–e) from DES / structured NEWS */
+.markdown-body h4.md-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  margin: 1.2em 0 0.6em 0;
+  padding: 0.5rem 0.7rem 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 0.95rem;
+  color: #1f2937;
+  line-height: 1.3;
+  border-bottom: none;
+  padding-bottom: 0.55rem;
+}
+.markdown-body h4.md-subhead--a { border-left-color: #1d4ed8; }
+.markdown-body h4.md-subhead--b { border-left-color: #0f766e; }
+.markdown-body h4.md-subhead--c { border-left-color: #b45309; }
+.markdown-body h4.md-subhead--d { border-left-color: #6d28d9; }
+.markdown-body h4.md-subhead--e { border-left-color: #be123c; }
+.markdown-body h4 .md-subhead__index {
+  display: inline-block;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+  color: #6b7280;
+  min-width: 1.3rem;
+}
+.markdown-body h4 .md-subhead__label {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.markdown-body p {
+  margin: 0.7em 0;
+}
+.markdown-body p + p {
+  margin-top: 0.9em;
+}
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.6em 0 0.6em 1.1em;
+  padding-left: 1.1em;
+}
+.markdown-body li {
+  margin: 0.28em 0;
+}
+.markdown-body li::marker {
+  color: var(--accent);
+}
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25em 0;
+}
+.markdown-body blockquote {
+  margin: 1em 0;
+  padding: 0.65em 0.85em;
+  border-left: 3px solid var(--accent);
+  background: rgba(15, 118, 110, 0.06);
+  border-radius: 0 8px 8px 0;
+  color: var(--text);
+}
+.markdown-body blockquote p {
+  margin: 0.35em 0;
+}
+.markdown-body strong {
+  color: var(--text);
+  font-weight: 650;
+}
+.markdown-body em {
+  color: #1f2937;
+}
+.markdown-body .md-sentiment-card {
+  margin: 1.5rem 0 0.25rem 0;
+  padding: 0.9rem 1rem 0.85rem 1rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8faff 0%, #f1f5f9 100%);
+  box-shadow: 0 1px 0 rgba(17, 24, 39, 0.04);
+}
+.markdown-body .md-sentiment__title {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #3730a3;
+  font-weight: 700;
+}
+.markdown-body .md-sentiment__hint {
+  margin: 0 0 0.55rem 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+.markdown-body .md-sentiment__list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.markdown-body .md-sentiment__item {
+  margin: 0.3em 0;
+  color: #111827;
+  font-size: 0.9rem;
+}
+.markdown-body .md-sentiment__value {
+  font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #1e3a8a;
+}
+.markdown-body .md-sentiment__meta {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+/* News timeline item */
+.news-item {
+  border-left: 3px solid var(--primary);
+  background: var(--surface);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 0 8px 8px 0;
+}
+.news-item .news-date {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.news-item .news-title {
+  color: var(--text);
+  font-weight: 600;
+  margin: 4px 0 8px 0;
+}
+
+/* Filter panel sticky on desktop */
+.filter-panel {
+  position: sticky;
+  top: 80px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+/* Section heading */
+.section-heading {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* Analyse ICB : onglets multiligne, pas de chevauchement entre libellés */
+.ind-icb-tabs-bar .tab-row,
+.ind-icb-tabs-bar .tab-row-container {
+  flex-wrap: wrap !important;
+  row-gap: 6px;
+  column-gap: 4px;
+  align-items: flex-start;
+}
+.ind-icb-tabs-bar .tab {
+  box-sizing: border-box;
+  max-width: 11.5rem;
+  white-space: normal !important;
+  word-break: break-word;
+  hyphens: auto;
+  text-align: center;
+  line-height: 1.2;
+  font-size: 12px;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+.ind-icb-tabs-bar {
+  width: 100%;
+}
