@@ -197,11 +197,21 @@ def layout() -> html.Div:
                 children=[
                     dmc.GridCol(
                         span={"base": 12, "lg": 9},
-                        children=html.Div(id="ind-desc-wrap"),
+                        children=dcc.Loading(
+                            type="circle",
+                            delay_show=200,
+                            color="#1E40AF",
+                            children=html.Div(id="ind-desc-wrap"),
+                        ),
                     ),
                     dmc.GridCol(
                         span={"base": 12, "lg": 3},
-                        children=html.Div(id="ind-news-wrap"),
+                        children=dcc.Loading(
+                            type="circle",
+                            delay_show=200,
+                            color="#1E40AF",
+                            children=html.Div(id="ind-news-wrap"),
+                        ),
                     ),
                 ],
             ),
@@ -210,16 +220,21 @@ def layout() -> html.Div:
                 withBorder=True,
                 radius="md",
                 p="md",
-                children=dmc.Stack(
-                    gap="sm",
-                    children=[
-                        dmc.Text("Scores (facteurs) — historique vs pairs bench", fw=600),
-                        dcc.Graph(
-                            id="ind-graph-factors",
-                            config={"displaylogo": False},
-                            style={"height": "1400px"},
-                        ),
-                    ],
+                children=dcc.Loading(
+                    type="circle",
+                    delay_show=200,
+                    color="#1E40AF",
+                    children=dmc.Stack(
+                        gap="sm",
+                        children=[
+                            dmc.Text("Scores (facteurs) — historique vs pairs bench", fw=600),
+                            dcc.Graph(
+                                id="ind-graph-factors",
+                                config={"displaylogo": False},
+                                style={"height": "1400px"},
+                            ),
+                        ],
+                    ),
                 ),
             ),
             dmc.Space(h=12),
@@ -227,16 +242,24 @@ def layout() -> html.Div:
                 withBorder=True,
                 radius="md",
                 p="md",
-                children=dmc.Stack(
-                    gap="sm",
-                    children=[
-                        dmc.Text(id="ind-metric-title", children="Autre indicateur (cliquer une cellule hors facteurs)"),
-                        dcc.Graph(
-                            id="ind-graph-metric",
-                            config={"displaylogo": False},
-                            style={"height": "400px"},
-                        ),
-                    ],
+                children=dcc.Loading(
+                    type="circle",
+                    delay_show=200,
+                    color="#1E40AF",
+                    children=dmc.Stack(
+                        gap="sm",
+                        children=[
+                            dmc.Text(
+                                id="ind-metric-title",
+                                children="Autre indicateur (cliquer une cellule hors facteurs)",
+                            ),
+                            dcc.Graph(
+                                id="ind-graph-metric",
+                                config={"displaylogo": False},
+                                style={"height": "400px"},
+                            ),
+                        ],
+                    ),
                 ),
             ),
         ],

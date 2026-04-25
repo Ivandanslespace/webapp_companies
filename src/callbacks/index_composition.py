@@ -32,6 +32,117 @@ _ACCENT = "#0F766E"
 _BLUE = "#1E40AF"
 
 
+def build_peer_factor_figure(H: pd.DataFrame, isin: str) -> go.Figure:
+    """7 sous-graphiques facteurs (pairs gris + ancre) ; ``H`` = historique bench."""
+    nfac = len([c for c in FACTOR_SCORE_COLUMNS if c in H.columns])
+    if nfac == 0:
+        fig7 = go.Figure()
+        fig7.update_layout(title="Aucun facteur (colonnes) dans les données", height=200)
+        return fig7
+    n_rows = nfac
+    fig7 = make_subplots(
+        rows=n_rows,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.04,
+        subplot_titles=[c for c in FACTOR_SCORE_COLUMNS if c in H.columns],
+    )
+    rnum = 0
+    for col in FACTOR_SCORE_COLUMNS:
+        if col not in H.columns:
+            continue
+        rnum += 1
+        anc, peers, _err = peer_fan_timeseries(H, isin, col)
+        for _pid, ser in peers.items():
+            fig7.add_trace(
+                go.Scattergl(
+                    x=ser.index,
+                    y=ser.values,
+                    mode="lines",
+                    line={"color": _GRAY, "width": 1},
+                    showlegend=False,
+                    hoverinfo="skip",
+                ),
+                row=rnum,
+                col=1,
+            )
+        if anc is not None and len(anc) > 0:
+            fig7.add_trace(
+                go.Scatter(
+                    x=anc.index,
+                    y=anc.values,
+                    mode="lines",
+                    name=col,
+                    line={"color": _ACCENT, "width": 2},
+                ),
+                row=rnum,
+                col=1,
+            )
+    fig7.update_layout(
+        template="plotly_white",
+        height=max(200, 190 * n_rows),
+        showlegend=False,
+        margin=dict(l=50, r=20, t=20, b=20),
+    )
+    fig7.update_yaxes(tickformat=".2f", hoverformat=".2f")
+    return fig7
+
+
+def build_peer_metric_figure(
+    H: pd.DataFrame, isin: str, active_m: str | None
+) -> tuple[go.Figure, str]:
+    """Graphique métrique hors facteurs + titre affiché."""
+    empty_m = go.Figure()
+    mtitle = "Autre indicateur (cliquez une cellule hors facteurs dans le tableau)"
+    if (
+        active_m
+        and active_m in H.columns
+        and active_m not in FACTOR_SCORE_COLUMNS
+        and active_m not in ("isin", "name", "ptf_w", CIQ_COL_ISIN, CIQ_COL_NAME)
+    ):
+        mtitle = f"Historique : {active_m}"
+        figm = go.Figure()
+        anc, peers, err = peer_fan_timeseries(H, isin, active_m)
+        for _pid, ser in peers.items():
+            figm.add_trace(
+                go.Scattergl(
+                    x=ser.index,
+                    y=ser.values,
+                    mode="lines",
+                    line={"color": _GRAY, "width": 1},
+                    showlegend=False,
+                )
+            )
+        if anc is not None and len(anc) > 0:
+            figm.add_trace(
+                go.Scatter(
+                    x=anc.index,
+                    y=anc.values,
+                    mode="lines+markers",
+                    name=isin,
+                    line={"color": _BLUE, "width": 2.2},
+                )
+            )
+        if err:
+            figm.update_layout(title=err, height=320)
+        else:
+            figm.update_layout(
+                template="plotly_white",
+                height=400,
+                xaxis_title="Date",
+                yaxis_title=active_m,
+                margin=dict(l=50, r=20, t=20, b=40),
+            )
+            figm.update_yaxes(tickformat=".2f", hoverformat=".2f")
+        return figm, mtitle
+    figm = empty_m
+    figm.update_layout(
+        title="Sélectionnez une colonne (hors 7 facteurs) dans le tableau",
+        height=200,
+    )
+    return figm, mtitle
+
+
 def _fmt(d: str | None) -> str:
     if d is None:
         return ""
@@ -171,19 +282,10 @@ def _ptf_table(ptf: str | None, bench: str | None, date: str | None, cols: list 
 @callback(
     Output("ptf-desc-wrap", "children"),
     Output("ptf-news-wrap", "children"),
-    Output("ptf-graph-factors", "figure"),
-    Output("ptf-graph-metric", "figure"),
-    Output("ptf-metric-title", "children"),
     Input("ptf-selected-isin", "data"),
-    Input("ptf-active-metric", "data"),
-    Input("ptf-bench", "value"),
 )
-def _ptf_detail_and_graphs(
-    isin: str | None, active_m: str | None, bench: str | None
-):
-    repo = get_repository()
-    empty = go.Figure()
-    empty_m = go.Figure()
+def _ptf_detail_panel(isin: str | None):
+    """Description + actualités (sans attendre les graphiques)."""
     if not isin:
         return (
             dmc.Text(
@@ -191,124 +293,53 @@ def _ptf_detail_and_graphs(
                 c="#6B7280",
             ),
             dmc.Text("—", c="#6B7280"),
-            empty,
-            empty_m,
-            "Autre indicateur (cliquez une cellule hors facteurs dans le tableau)",
         )
+    repo = get_repository()
     desc = repo.get_description(isin)
     news = repo.get_news(isin)
     desc_c = (
         render_description_panel(desc) if desc is not None else dmc.Paper("—")
     )
     news_c = render_news_timeline(news)
+    return desc_c, news_c
 
-    if not bench:
-        return desc_c, news_c, empty, empty_m, "—"
+
+@callback(
+    Output("ptf-graph-factors", "figure"),
+    Input("ptf-selected-isin", "data"),
+    Input("ptf-bench", "value"),
+)
+def _ptf_factor_graphs(isin: str | None, bench: str | None):
+    empty = go.Figure()
+    if not isin or not bench:
+        return empty
     ridx = get_index_screen_repository()
     if bench not in ridx.df.columns:
-        return desc_c, news_c, empty, empty_m, "—"
+        return empty
     H = ridx.history_for_index(bench)
+    if H.empty:
+        return empty
+    return build_peer_factor_figure(H, isin)
 
-    nfac = len([c for c in FACTOR_SCORE_COLUMNS if c in H.columns])
-    if nfac == 0:
-        fig7 = go.Figure()
-        fig7.update_layout(title="Aucun facteur (colonnes) dans les données", height=200)
-    else:
-        n_rows = nfac
-        fig7 = make_subplots(
-            rows=n_rows,
-            cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.04,
-            subplot_titles=[c for c in FACTOR_SCORE_COLUMNS if c in H.columns],
-        )
-        rnum = 0
-        for col in FACTOR_SCORE_COLUMNS:
-            if col not in H.columns:
-                continue
-            rnum += 1
-            anc, peers, _err = peer_fan_timeseries(H, isin, col)
-            for _pid, ser in peers.items():
-                fig7.add_trace(
-                    go.Scattergl(
-                        x=ser.index,
-                        y=ser.values,
-                        mode="lines",
-                        line={"color": _GRAY, "width": 1},
-                        showlegend=False,
-                        hoverinfo="skip",
-                    ),
-                    row=rnum,
-                    col=1,
-                )
-            if anc is not None and len(anc) > 0:
-                fig7.add_trace(
-                    go.Scatter(
-                        x=anc.index,
-                        y=anc.values,
-                        mode="lines",
-                        name=col,
-                        line={"color": _ACCENT, "width": 2},
-                    ),
-                    row=rnum,
-                    col=1,
-                )
-        fig7.update_layout(
-            template="plotly_white",
-            height=max(200, 190 * n_rows),
-            showlegend=False,
-            margin=dict(l=50, r=20, t=20, b=20),
-        )
-        fig7.update_yaxes(tickformat=".2f", hoverformat=".2f")
 
-    mtitle = "Autre indicateur (cliquez une cellule hors facteurs)"
-    figm = go.Figure()
-    if (
-        active_m
-        and active_m in H.columns
-        and active_m not in FACTOR_SCORE_COLUMNS
-        and active_m not in ("isin", "name", "ptf_w", CIQ_COL_ISIN, CIQ_COL_NAME)
-    ):
-        mtitle = f"Historique : {active_m}"
-        anc, peers, err = peer_fan_timeseries(H, isin, active_m)
-        for _pid, ser in peers.items():
-            figm.add_trace(
-                go.Scattergl(
-                    x=ser.index,
-                    y=ser.values,
-                    mode="lines",
-                    line={"color": _GRAY, "width": 1},
-                    showlegend=False,
-                )
-            )
-        if anc is not None and len(anc) > 0:
-            figm.add_trace(
-                go.Scatter(
-                    x=anc.index,
-                    y=anc.values,
-                    mode="lines+markers",
-                    name=isin,
-                    line={"color": _BLUE, "width": 2.2},
-                )
-            )
-        if err:
-            figm.update_layout(title=err, height=320)
-        else:
-            figm.update_layout(
-                template="plotly_white",
-                height=400,
-                xaxis_title="Date",
-                yaxis_title=active_m,
-                margin=dict(l=50, r=20, t=20, b=40),
-            )
-            figm.update_yaxes(tickformat=".2f", hoverformat=".2f")
-    else:
-        figm.update_layout(
-            title="Sélectionnez une colonne (hors 7 facteurs) dans le tableau",
-            height=200,
-        )
-
-    return desc_c, news_c, fig7, figm, mtitle
+@callback(
+    Output("ptf-graph-metric", "figure"),
+    Output("ptf-metric-title", "children"),
+    Input("ptf-selected-isin", "data"),
+    Input("ptf-active-metric", "data"),
+    Input("ptf-bench", "value"),
+)
+def _ptf_metric_graph(isin: str | None, active_m: str | None, bench: str | None):
+    empty_m = go.Figure()
+    if not isin or not bench:
+        return empty_m, "—"
+    ridx = get_index_screen_repository()
+    if bench not in ridx.df.columns:
+        return empty_m, "—"
+    H = ridx.history_for_index(bench)
+    if H.empty:
+        return empty_m, "—"
+    return build_peer_metric_figure(H, isin, active_m)
 
 
 def _row_index_for_isin(data: list | None, isin_s: str) -> list[int]:
