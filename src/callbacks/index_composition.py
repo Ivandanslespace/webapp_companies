@@ -6,7 +6,7 @@ from collections import OrderedDict
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
-from dash import Input, Output, State, callback, no_update, callback_context
+from dash import Input, Output, State, callback, clientside_callback, no_update, callback_context
 import dash_mantine_components as dmc
 
 from src.data.index_screen_repository import get_index_screen_repository
@@ -588,3 +588,16 @@ def _ptf_drawer_header(isin, data):
             dmc.Text(str(isin), size="xs", c="dimmed", ff="monospace"),
         ],
     )
+
+
+# 打开抽屉时禁止 body 滚动；关闭时恢复（换页由 scroll_lock 统一清空）
+clientside_callback(
+    """
+    function(open) {
+        document.body.style.overflow = open ? 'hidden' : '';
+        return 0;
+    }
+    """,
+    Output("ptf-drawer-scroll-helper", "data"),
+    Input("ptf-drawer-open", "data"),
+)

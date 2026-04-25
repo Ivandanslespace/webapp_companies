@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import dash
 import dash_mantine_components as dmc
-from dash import html
+from dash import dcc, html
 
 from src.ui.components.navbar import render_navbar
 
@@ -18,6 +18,8 @@ def build_layout() -> dmc.MantineProvider:
         children=html.Div(
             className="app-root",
             children=[
+                dcc.Location(id="_url", refresh=False),
+                dcc.Store(id="_scroll_reset_sink", data=0),
                 render_navbar(),
                 html.Main(
                     dash.page_container,

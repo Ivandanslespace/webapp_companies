@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import plotly.graph_objects as go
 import pandas as pd
-from dash import Input, Output, State, callback, no_update, callback_context
+from dash import Input, Output, State, callback, clientside_callback, no_update, callback_context
 import dash_mantine_components as dmc
 
 from src.data.index_screen_repository import get_index_screen_repository
@@ -436,3 +436,15 @@ def _ind_drawer_header(isin, data):
             dmc.Text(str(isin), size="xs", c="dimmed", ff="monospace"),
         ],
     )
+
+
+clientside_callback(
+    """
+    function(open) {
+        document.body.style.overflow = open ? 'hidden' : '';
+        return 0;
+    }
+    """,
+    Output("ind-drawer-scroll-helper", "data"),
+    Input("ind-drawer-open", "data"),
+)

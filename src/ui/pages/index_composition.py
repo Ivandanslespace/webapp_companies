@@ -60,6 +60,7 @@ def layout() -> html.Div:
             dcc.Store(id="ptf-active-metric", data=None, storage_type="session"),
             dcc.Store(id="ptf-drawer-open", data=False),
             dcc.Store(id="ptf-drawer-tab", data="description"),
+            dcc.Store(id="ptf-drawer-scroll-helper", data=0),
             dmc.Title("Portefeuille & comparaison sectorielle (bench)", order=2, c="#111827"),
             dmc.Space(h=12),
             dmc.Paper(
