@@ -30,17 +30,15 @@ MANTINE_THEME: dict = {
     "defaultRadius": "md",
     "white": COLOR_SURFACE,
     "black": COLOR_TEXT,
+    # 仅保留 sizes；勿在 headings 根上设 fontWeight（与 dmc/Mantine 7 序列化冲突会生成非法 CSS）
     "headings": {
-        "fontFamily": FONT_FAMILY,
-        "fontWeight": "600",
-        # Mantine 7 attend ``sizes.h1``…``h6`` ; sinon Title / styles internes peuvent planter côté client.
         "sizes": {
-            "h1": {"fontSize": "2.125rem", "lineHeight": "1.3", "fontWeight": "600"},
-            "h2": {"fontSize": "1.625rem", "lineHeight": "1.35", "fontWeight": "600"},
-            "h3": {"fontSize": "1.375rem", "lineHeight": "1.4", "fontWeight": "600"},
-            "h4": {"fontSize": "1.125rem", "lineHeight": "1.45", "fontWeight": "600"},
-            "h5": {"fontSize": "1rem", "lineHeight": "1.5", "fontWeight": "600"},
-            "h6": {"fontSize": "0.875rem", "lineHeight": "1.5", "fontWeight": "600"},
+            "h1": {"fontSize": "2.125rem", "lineHeight": "1.3", "fontWeight": 600},
+            "h2": {"fontSize": "1.625rem", "lineHeight": "1.35", "fontWeight": 600},
+            "h3": {"fontSize": "1.375rem", "lineHeight": "1.4", "fontWeight": 600},
+            "h4": {"fontSize": "1.125rem", "lineHeight": "1.45", "fontWeight": 600},
+            "h5": {"fontSize": "1rem", "lineHeight": "1.5", "fontWeight": 600},
+            "h6": {"fontSize": "0.875rem", "lineHeight": "1.5", "fontWeight": 600},
         },
     },
 }

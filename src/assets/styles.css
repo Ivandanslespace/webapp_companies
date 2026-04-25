@@ -20,10 +20,19 @@ html, body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /* 高度链到 Dash 根节点，供 AppShell 主区吃满一屏 */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+/* Dash 根：仅设最小高度；勿用 #_dash-app-content > * 强改子节点 display，易与 React/Mantine 根节点冲突导致白屏 */
+#_dash-app-content {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* 全宽占满视口，减少四周留白 */
@@ -36,13 +45,15 @@ html, body {
   max-width: 100%;
 }
 
-/* 主内容区：全宽，仅保留窄内边距避免贴边裁切 */
+/* 主内容区：全宽，仅保留窄内边距避免贴边裁切；随父列撑满可滚动区 */
 .app-main {
   flex: 1 1 auto;
   width: 100%;
   max-width: none;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
-  padding: 10px 12px 20px 12px;
+  padding: 8px 12px 20px 12px;
   box-sizing: border-box;
 }
 
@@ -68,16 +79,134 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   height: 100%;
 }
 
-/* Navbar baseline */
-.app-navbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 12px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+/* AppShell 固定顶栏 + 主内容 */
+.app-shell-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg);
   width: 100%;
+  max-width: 100%;
+}
+
+/* Header：轻微阴影与毛玻璃，与内容区分层 */
+.app-shell-header-bar,
+.app-shell-header-bar.mantine-AppShell-header {
+  background: color-mix(in srgb, var(--surface) 88%, rgba(15, 23, 42, 0.04));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+/* 主内容区：与顶栏留一点呼吸缝；占满头栏以下视口，长内容在本区滚动、不再被父级裁切 */
+.app-shell-main-outer,
+.app-shell-root .mantine-AppShell-main {
+  --app-header-h: 80px;
+  --app-main-pad-top: 10px; /* 顶栏与首屏内容之间的额外间隔 */
+  flex: 1 1 auto !important;
+  min-width: 0;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
   box-sizing: border-box;
+  padding-top: var(--app-main-pad-top);
+  /* 用 auto 不用 hidden，避免 Mantine 默认裁切长页；与顶栏 80px 在 layout 中一致 */
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+/* 内容包装：短页也至少铺满头栏下剩余视口，背景铺底；长页由父级 main 出现滚动条 */
+#app-page-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* 变量继承自 .app-shell-main-outer，与顶栏/上间隔对齐 */
+  min-height: calc(100dvh - var(--app-header-h, 80px) - var(--app-main-pad-top, 10px));
+  box-sizing: border-box;
+}
+
+/* 中心胶囊条：等宽高亮、圆角、玻璃底 */
+.app-nav-pill {
+  max-width: min(52rem, 100%);
+  margin-inline: auto;
+  border-radius: 999px;
+  padding: 4px 6px;
+  background: color-mix(in srgb, #ffffff 72%, rgba(15, 23, 42, 0.03));
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-nav-pill__link.mantine-NavLink-root {
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  text-decoration: none;
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid transparent;
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease, border-color 0.2s ease;
+}
+.app-nav-pill__link.mantine-NavLink-root:hover {
+  color: #111827;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translateY(-0.5px);
+}
+/* Mantine 7 NavLink 激活 data-active */
+.app-nav-pill__link.mantine-NavLink-root[data-active] {
+  color: #fff;
+  background: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 80%, #1e3a8a);
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.28);
+}
+
+/* 侧栏内链接与桌面一致可辨 */
+.app-nav-mobile__link.mantine-NavLink-root[data-active] {
+  background: color-mix(in srgb, var(--primary) 10%, #fff);
+  color: #1e3a8a;
+  font-weight: 600;
+  border-left: 3px solid var(--primary);
+  padding-left: 10px;
+}
+
+/* 主视图切换动效：浅滑入 + 淡入 220ms */
+.app-page-wrap {
+  will-change: opacity, transform;
+}
+.app-page-flip-0,
+.app-page-flip-1 {
+  animation: appPageIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes appPageIn {
+  from {
+    opacity: 0;
+    transform: translate3d(8px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 小屏时避免标题与胶囊抢行过挤 */
+@media (max-width: 39.99em) {
+  .app-brand-title {
+    font-size: 0.95rem !important;
+  }
+  .app-brand-subtitle {
+    display: none;
+  }
 }
 
 /* Readable measure for long-form Markdown (DES + NEWS) */
@@ -366,7 +495,8 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(72vw, 980px);
+  /* 自定义侧栏宽度，对应 Mantine Drawer size=85% */
+  width: 85%;
   max-width: 100%;
   background: var(--surface);
   box-shadow: -8px 0 32px rgba(15, 23, 42, 0.12);
@@ -430,14 +560,9 @@ a.card-link, a.card-link:hover, a.card-link:visited {
 .drawer-fab-wrap .mantine-Button-root {
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
 }
-@media (max-width: 1024px) {
-  .drawer-panel {
-    width: 78vw;
-  }
-}
 @media (max-width: 640px) {
   .drawer-panel {
-    width: 100vw;
+    width: 100%;
   }
   .drawer-fab-wrap {
     right: 16px;

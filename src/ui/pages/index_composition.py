@@ -226,18 +226,37 @@ def layout() -> html.Div:
                                         id="ptf-panel-description",
                                         className="drawer-tab-panel drawer-tab-panel--active",
                                         children=[
-                                            dcc.Loading(
-                                                type="circle",
-                                                delay_show=200,
-                                                color="#1E40AF",
-                                                children=html.Div(id="ptf-desc-wrap"),
-                                            ),
-                                            dmc.Space(h=12),
-                                            dcc.Loading(
-                                                type="circle",
-                                                delay_show=200,
-                                                color="#1E40AF",
-                                                children=html.Div(id="ptf-news-wrap"),
+                                            dmc.Grid(
+                                                gutter="md",
+                                                align="flex-start",
+                                                children=[
+                                                    dmc.GridCol(
+                                                        span={"base": 12, "md": 8},
+                                                        children=[
+                                                            dcc.Loading(
+                                                                type="circle",
+                                                                delay_show=200,
+                                                                color="#1E40AF",
+                                                                children=html.Div(
+                                                                    id="ptf-desc-wrap"
+                                                                ),
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    dmc.GridCol(
+                                                        span={"base": 12, "md": 4},
+                                                        children=[
+                                                            dcc.Loading(
+                                                                type="circle",
+                                                                delay_show=200,
+                                                                color="#1E40AF",
+                                                                children=html.Div(
+                                                                    id="ptf-news-wrap"
+                                                                ),
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ],
                                             ),
                                         ],
                                     ),
@@ -247,41 +266,58 @@ def layout() -> html.Div:
                                         children=[
                                             dmc.Text("Facteurs & indicateurs", size="md", fw=700),
                                             dmc.Space(h=6),
-                                            dmc.Text(
-                                                "Historique des facteurs (société sélectionnée)",
-                                                size="sm",
-                                                fw=600,
+                                            dmc.Grid(
+                                                gutter="md",
+                                                align="flex-start",
+                                                children=[
+                                                    dmc.GridCol(
+                                                        span={"base": 12, "md": 8},
+                                                        children=[
+                                                            dmc.Text(
+                                                                "Historique des facteurs (société sélectionnée)",
+                                                                size="sm",
+                                                                fw=600,
+                                                            ),
+                                                            dmc.Space(h=8),
+                                                            dcc.Loading(
+                                                                type="circle",
+                                                                delay_show=200,
+                                                                color="#1E40AF",
+                                                                children=dcc.Graph(
+                                                                    id="ptf-graph-factors",
+                                                                    config={"displaylogo": False},
+                                                                    style={"minHeight": "400px"},
+                                                                ),
+                                                            ),
+                                                            dmc.Space(h=16),
+                                                            html.Div(
+                                                                id="ptf-metric-charts-wrap"
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    dmc.GridCol(
+                                                        span={"base": 12, "md": 4},
+                                                        children=[
+                                                            dmc.Text(
+                                                                "Indicateurs détaillés (pairs même bench / secteur / région)",
+                                                                size="sm",
+                                                                fw=600,
+                                                            ),
+                                                            dmc.Space(h=6),
+                                                            dmc.MultiSelect(
+                                                                id="ptf-metric-multiselect",
+                                                                label="Métriques à afficher (par groupe CIQ)",
+                                                                data=metric_drawer_data,
+                                                                value=[],
+                                                                searchable=True,
+                                                                clearable=True,
+                                                                nothingFoundMessage="Aucune métrique",
+                                                                comboboxProps={"zIndex": 5000},
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ],
                                             ),
-                                            dmc.Space(h=8),
-                                            dcc.Loading(
-                                                type="circle",
-                                                delay_show=200,
-                                                color="#1E40AF",
-                                                children=dcc.Graph(
-                                                    id="ptf-graph-factors",
-                                                    config={"displaylogo": False},
-                                                    style={"minHeight": "400px"},
-                                                ),
-                                            ),
-                                            dmc.Space(h=16),
-                                            dmc.Text(
-                                                "Indicateurs détaillés (pairs même bench / secteur / région)",
-                                                size="sm",
-                                                fw=600,
-                                            ),
-                                            dmc.Space(h=6),
-                                            dmc.MultiSelect(
-                                                id="ptf-metric-multiselect",
-                                                label="Métriques à afficher (par groupe CIQ)",
-                                                data=metric_drawer_data,
-                                                value=[],
-                                                searchable=True,
-                                                clearable=True,
-                                                nothingFoundMessage="Aucune métrique",
-                                                comboboxProps={"zIndex": 5000},
-                                            ),
-                                            dmc.Space(h=12),
-                                            html.Div(id="ptf-metric-charts-wrap"),
                                         ],
                                     ),
                                 ],
