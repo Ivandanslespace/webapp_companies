@@ -70,7 +70,6 @@ def layout() -> html.Div:
             dcc.Store(id="ind-selected-isin", data=None),
             dcc.Store(id="ind-active-metric", data=None),
             dcc.Store(id="ind-drawer-open", data=False),
-            dcc.Store(id="ind-drawer-tab", data="description"),
             dcc.Store(id="ind-drawer-scroll-helper", data=0),
             dmc.Title("Analyse sectorielle (ICB19 × indice × portefeuille)", order=2, c="#111827"),
             dmc.Text(

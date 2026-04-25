@@ -524,36 +524,20 @@ def _ptf_drawer_fab_style(open_, isin):
 
 
 @callback(
-    Output("ptf-drawer-tab", "data"),
+    Output("ptf-drawer-seg", "value"),
     Input("ptf-selected-isin", "data"),
-    Input("ptf-drawer-seg", "value"),
     Input("ptf-drawer-reopen", "n_clicks"),
 )
-def _ptf_drawer_tab_store(isin, seg, _nr):
-    if not callback_context.triggered:
-        return "description"
-    tid = callback_context.triggered_id
-    if tid in ("ptf-selected-isin", "ptf-drawer-reopen"):
-        return "description"
-    if tid == "ptf-drawer-seg":
-        return seg if seg else "description"
+def _ptf_drawer_seg_reset(isin, _nr):
+    """Réinitialise l’onglet ; pas d’Input sur la value du seg (évite cycle tab ↔ seg)."""
     return "description"
-
-
-@callback(
-    Output("ptf-drawer-seg", "value"),
-    Input("ptf-drawer-tab", "data"),
-    prevent_initial_call=True,
-)
-def _ptf_drawer_seg_sync(tab):
-    return tab if tab else "description"
 
 
 @callback(
     Output("ptf-panel-description", "className"),
     Output("ptf-panel-industry", "className"),
     Output("ptf-panel-indicators", "className"),
-    Input("ptf-drawer-tab", "data"),
+    Input("ptf-drawer-seg", "value"),
 )
 def _ptf_drawer_panels(tab):
     tab = tab or "description"

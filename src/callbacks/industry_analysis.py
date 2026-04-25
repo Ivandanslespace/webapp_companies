@@ -372,36 +372,19 @@ def _ind_drawer_fab_style(open_, isin):
 
 
 @callback(
-    Output("ind-drawer-tab", "data"),
+    Output("ind-drawer-seg", "value"),
     Input("ind-selected-isin", "data"),
-    Input("ind-drawer-seg", "value"),
     Input("ind-drawer-reopen", "n_clicks"),
 )
-def _ind_drawer_tab_store(isin, seg, _nr):
-    if not callback_context.triggered:
-        return "description"
-    tid = callback_context.triggered_id
-    if tid in ("ind-selected-isin", "ind-drawer-reopen"):
-        return "description"
-    if tid == "ind-drawer-seg":
-        return seg if seg else "description"
+def _ind_drawer_seg_reset(isin, _nr):
     return "description"
-
-
-@callback(
-    Output("ind-drawer-seg", "value"),
-    Input("ind-drawer-tab", "data"),
-    prevent_initial_call=True,
-)
-def _ind_drawer_seg_sync(tab):
-    return tab if tab else "description"
 
 
 @callback(
     Output("ind-panel-description", "className"),
     Output("ind-panel-industry", "className"),
     Output("ind-panel-indicators", "className"),
-    Input("ind-drawer-tab", "data"),
+    Input("ind-drawer-seg", "value"),
 )
 def _ind_drawer_panels(tab):
     tab = tab or "description"
