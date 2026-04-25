@@ -53,7 +53,8 @@ def layout() -> html.Div:
     group_add_opts = [{"value": g.id, "label": g.label} for g in groups]
 
     return html.Div(
-        [
+        className="page-ptf-index",
+        children=[
             # session：navigation hors page puis retour sans perdre filtres / société sélectionnée
             dcc.Store(id="ptf-selected-isin", data=None, storage_type="session"),
             dcc.Store(id="ptf-active-metric", data=None, storage_type="session"),
@@ -173,11 +174,11 @@ def layout() -> html.Div:
                 gutter="md",
                 children=[
                     dmc.GridCol(
-                        span={"base": 12, "lg": 8},
+                        span={"base": 12, "lg": 9},
                         children=html.Div(id="ptf-desc-wrap"),
                     ),
                     dmc.GridCol(
-                        span={"base": 12, "lg": 4},
+                        span={"base": 12, "lg": 3},
                         children=html.Div(id="ptf-news-wrap"),
                     ),
                 ],
@@ -216,5 +217,5 @@ def layout() -> html.Div:
                     ],
                 ),
             ),
-        ]
+        ],
     )

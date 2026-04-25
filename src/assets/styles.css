@@ -85,8 +85,10 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   max-width: 72ch;
 }
 
-/* Page entreprise : description sur toute la largeur de la colonne */
-.page-company-detail .markdown-prose {
+/* Pages avec panneau Description (entreprise, composition indice, analyse ICB) */
+.page-company-detail .markdown-prose,
+.page-ptf-index .markdown-prose,
+.page-industry-icb .markdown-prose {
   max-width: none;
   width: 100%;
 }

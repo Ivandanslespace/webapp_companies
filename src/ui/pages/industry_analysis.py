@@ -65,7 +65,8 @@ def layout() -> html.Div:
     ]
 
     return html.Div(
-        [
+        className="page-industry-icb",
+        children=[
             dcc.Store(id="ind-selected-isin", data=None),
             dcc.Store(id="ind-active-metric", data=None),
             dmc.Title("Analyse sectorielle (ICB19 × indice × portefeuille)", order=2, c="#111827"),
@@ -195,11 +196,11 @@ def layout() -> html.Div:
                 gutter="md",
                 children=[
                     dmc.GridCol(
-                        span={"base": 12, "lg": 8},
+                        span={"base": 12, "lg": 9},
                         children=html.Div(id="ind-desc-wrap"),
                     ),
                     dmc.GridCol(
-                        span={"base": 12, "lg": 4},
+                        span={"base": 12, "lg": 3},
                         children=html.Div(id="ind-news-wrap"),
                     ),
                 ],
@@ -238,5 +239,5 @@ def layout() -> html.Div:
                     ],
                 ),
             ),
-        ]
+        ],
     )
