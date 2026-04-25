@@ -106,21 +106,22 @@ def layout(isin: str | None = None, **_kwargs) -> html.Div:
     )
 
     return html.Div(
-        [
+        className="page-company-detail",
+        children=[
             header,
             dmc.Space(h=20),
             dmc.Grid(
                 gutter="xl",
                 children=[
                     dmc.GridCol(
-                        span={"base": 12, "md": 8},
+                        span={"base": 12, "md": 9},
                         children=render_description_panel(description_row),
                     ),
                     dmc.GridCol(
-                        span={"base": 12, "md": 4},
+                        span={"base": 12, "md": 3},
                         children=render_news_timeline(news_df),
                     ),
                 ],
             ),
-        ]
+        ],
     )
