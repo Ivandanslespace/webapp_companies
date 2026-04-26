@@ -182,9 +182,33 @@ def layout() -> html.Div:
                             active_cell=None,
                             cell_selectable=True,
                             sort_action="native",
-                            style_table={"overflowX": "auto", "minWidth": "600px"},
-                            style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px"},
-                            style_header={"fontWeight": 600, "backgroundColor": "#F3F4F6"},
+                            fill_width=False,
+                            css=[
+                                {
+                                    "selector": ".dash-table-container",
+                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
+                                },
+                                {
+                                    "selector": ".dash-spreadsheet",
+                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
+                                },
+                            ],
+                            style_table={
+                                "overflowX": "auto",
+                                "maxWidth": "100%",
+                                "minWidth": 0,
+                            },
+                            style_cell={
+                                "textAlign": "left",
+                                "padding": "6px 10px",
+                                "fontSize": "13px",
+                                "whiteSpace": "nowrap",
+                            },
+                            style_header={
+                                "fontWeight": 600,
+                                "backgroundColor": "#F3F4F6",
+                                "verticalAlign": "bottom",
+                            },
                             style_data_conditional=[
                                 {
                                     "if": {"filter_query": "{ptf_w} > 0"},

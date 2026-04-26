@@ -20,6 +20,8 @@ html, body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /* 禁止视口最底层出现横向条（由各区块自己 overflow-x；AppShell 主区亦单独处理 x/y） */
+  overflow-x: hidden;
   /* 高度链到 Dash 根节点，供 AppShell 主区吃满一屏 */
   min-height: 100vh;
   min-height: 100dvh;
@@ -33,6 +35,8 @@ html, body {
 #_dash-app-content {
   min-height: 100vh;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* 全宽占满视口，减少四周留白 */
@@ -116,8 +120,9 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   flex-direction: column !important;
   box-sizing: border-box;
   padding-top: var(--app-main-pad-top);
-  /* 用 auto 不用 hidden，避免 Mantine 默认裁切长页；与顶栏 80px 在 layout 中一致 */
-  overflow: auto !important;
+  /* 纵向用 auto 滚长页；横向禁止在「主壳」上出条（改由表格式块内部滚），避免底部整区横条 */
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
 }
 /* 内容包装：短页也至少铺满头栏下剩余视口，背景铺底；长页由父级 main 出现滚动条 */
@@ -213,6 +218,72 @@ a.card-link, a.card-link:hover, a.card-link:visited {
 /* Readable measure for long-form Markdown (DES + NEWS) */
 .markdown-prose {
   max-width: 72ch;
+}
+
+/* 指数组合页根：允许在 flex 链上收缩，避免宽表格把 AppShell main 撑出整区横向条 */
+.page-ptf-index {
+  min-width: 0;
+  max-width: 100%;
+}
+/* PTF 表格外壳 + Dash DataTable 内部类：把横向滚动关在本块内，不撑宽祖先链 */
+.page-ptf-index .ptf-table-outer,
+.page-ptf-index [id="ptf-table"],
+.page-ptf-index [id="ptf-table"] .dash-table-container,
+.page-ptf-index [id="ptf-table"] .dash-spreadsheet,
+.page-ptf-index [id="ptf-table"] .dash-spreadsheet-container,
+.page-ptf-index [id="ptf-table"] .dash-spreadsheet .dash-spreadsheet-container {
+  max-width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.page-ptf-index [id="ptf-table"] .dash-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ICB 页主表：与组合页一致，横向滚动留在表容器内 */
+.page-industry-icb [id="ind-ptf-table"],
+.page-industry-icb [id="ind-ptf-table"] .dash-table-container,
+.page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet,
+.page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet-container {
+  max-width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.page-industry-icb [id="ind-ptf-table"] .dash-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
+ * DataTable：列宽随内容（配合 fill_width=false + table width:max-content）；
+ * 表头最多约两行；数据格单行不换行。
+ */
+.page-ptf-index [id="ptf-table"] table,
+.page-industry-icb [id="ind-ptf-table"] table {
+  table-layout: auto;
+  width: max-content;
+}
+.page-ptf-index [id="ptf-table"] th.dash-header-cell,
+.page-industry-icb [id="ind-ptf-table"] th.dash-header-cell {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.25;
+  max-height: 2.5em;
+  overflow: hidden;
+  vertical-align: bottom;
+  box-sizing: border-box;
+}
+.page-ptf-index [id="ptf-table"] td.dash-cell,
+.page-industry-icb [id="ind-ptf-table"] td.dash-cell {
+  white-space: nowrap !important;
+  box-sizing: border-box;
+}
+.page-ptf-index .mantine-Paper-root {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Pages avec panneau Description (entreprise, composition indice, analyse ICB) */

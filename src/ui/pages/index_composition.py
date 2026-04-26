@@ -180,7 +180,8 @@ def layout() -> html.Div:
                 radius="md",
                 p="md",
                 children=html.Div(
-                    dcc.Loading(
+                    className="ptf-table-outer",
+                    children=dcc.Loading(
                         type="default",
                         children=DataTable(
                             id="ptf-table",
@@ -192,32 +193,41 @@ def layout() -> html.Div:
                             active_cell=None,
                             cell_selectable=True,
                             sort_action="native",
-                            # 宽度锁在父级内，列过多时由表格内部 overflowX 滚动
+                            fill_width=False,
+                            # 注入的样式会挂在表组件作用域，约束 .dash-spreadsheet 等内层
+                            css=[
+                                {
+                                    "selector": ".dash-table-container",
+                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
+                                },
+                                {
+                                    "selector": ".dash-spreadsheet",
+                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
+                                },
+                            ],
                             style_table={
                                 "overflowX": "auto",
-                                "width": "100%",
-                                "minWidth": "100%",
+                                "maxWidth": "100%",
+                                "minWidth": 0,
                             },
                             style_cell={
                                 "textAlign": "left",
                                 "padding": "6px 10px",
                                 "fontSize": "13px",
-                                "whiteSpace": "normal",
-                                "height": "auto",
+                                "whiteSpace": "nowrap",
                             },
                             style_header={
                                 "fontWeight": 600,
                                 "backgroundColor": "#F3F4F6",
-                                "whiteSpace": "normal",
-                                "height": "auto",
                                 "verticalAlign": "bottom",
                             },
                         ),
                     ),
-                    # 截断子级水平溢出，避免整页出现底部横向滚动条
+                    # 与 styles.css 中 .ptf-table-outer / #ptf-table 配合，主壳不再出横向条
                     style={
-                        "width": "100%",
-                        "overflowX": "hidden",
+                        "maxWidth": "100%",
+                        "minWidth": 0,
+                        "overflowX": "auto",
                         "maxHeight": "480px",
                         "overflowY": "auto",
                     },
