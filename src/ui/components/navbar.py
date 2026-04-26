@@ -1,4 +1,4 @@
-"""导航已迁移至 app_header（AppShell 顶栏）。保留此模块名仅避免误用旧路径。"""
+"""La navigation est dans app_header (en-tête AppShell). Ce module conserve l’ancien nom pour éviter les imports obsolètes."""
 from __future__ import annotations
 
 from src.ui.components.app_header import build_app_header_content

@@ -20,9 +20,9 @@ html, body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  /* 禁止视口最底层出现横向条（由各区块自己 overflow-x；AppShell 主区亦单独处理 x/y） */
+  /* Interdire la barre de défilement horizontale au bas du viewport (overflow-x par bloc ; la zone main AppShell gère x/y séparément) */
   overflow-x: hidden;
-  /* 高度链到 Dash 根节点，供 AppShell 主区吃满一屏 */
+  /* Chaîne de hauteur jusqu’au nœud racine Dash pour remplir l’écran dans la zone main AppShell */
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -31,7 +31,7 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Dash 根：仅设最小高度；勿用 #_dash-app-content > * 强改子节点 display，易与 React/Mantine 根节点冲突导致白屏 */
+/* Racine Dash : min-height seulement ; ne pas forcer display sur #_dash-app-content > * (conflit React/Mantine, écran blanc) */
 #_dash-app-content {
   min-height: 100vh;
   min-height: 100dvh;
@@ -39,7 +39,7 @@ html, body {
   overflow-x: hidden;
 }
 
-/* 全宽占满视口，减少四周留白 */
+/* Largeur pleine sur le viewport, marges latérales réduites */
 .app-root {
   min-height: 100vh;
   min-height: 100dvh;
@@ -49,7 +49,7 @@ html, body {
   max-width: 100%;
 }
 
-/* 主内容区：全宽，仅保留窄内边距避免贴边裁切；随父列撑满可滚动区 */
+/* Zone principale : pleine largeur, padding léger pour éviter le rognage ; suit la colonne parent scrollable */
 .app-main {
   flex: 1 1 auto;
   width: 100%;
@@ -57,7 +57,7 @@ html, body {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  /* 与顶栏之间的留白主要由 .app-shell-main-outer 的 --app-main-pad-top 承担；此处略增避免首行标题与下方第一块内容贴太紧 */
+  /* L’espace sous le header est surtout géré par --app-main-pad-top sur .app-shell-main-outer ; léger rehausse ici pour l’espace titre / premier bloc */
   padding: 12px 12px 24px 12px;
   box-sizing: border-box;
 }
@@ -84,7 +84,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   height: 100%;
 }
 
-/* AppShell 固定顶栏 + 主内容 */
+/* AppShell : en-tête fixe + contenu principal */
 .app-shell-root {
   flex: 1 1 auto;
   min-height: 0;
@@ -97,7 +97,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   max-width: 100%;
 }
 
-/* Header：轻微阴影与毛玻璃，与内容区分层 */
+/* En-tête : ombre légère et flou pour séparer visuellement du contenu */
 .app-shell-header-bar,
 .app-shell-header-bar.mantine-AppShell-header {
   background: color-mix(in srgb, var(--surface) 88%, rgba(15, 23, 42, 0.04));
@@ -107,11 +107,11 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
-/* 主内容区：与顶栏留一点呼吸缝；占满头栏以下视口，长内容在本区滚动、不再被父级裁切 */
+/* Zone main : marge sous l’en-tête ; remplit le viewport sous le header ; défilement ici, pas rogné par le parent */
 .app-shell-main-outer,
 .app-shell-root .mantine-AppShell-main {
   --app-header-h: 80px;
-  --app-main-pad-top: 20px; /* 顶栏与主内容区首行之间的呼吸空间（与 layout 中 header 高度 80 配套） */
+  --app-main-pad-top: 20px; /* Marge en-tête / première ligne (aligné sur header 80px dans layout) */
   flex: 1 1 auto !important;
   min-width: 0;
   min-height: 0 !important;
@@ -120,23 +120,23 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   flex-direction: column !important;
   box-sizing: border-box;
   padding-top: var(--app-main-pad-top);
-  /* 纵向用 auto 滚长页；横向禁止在「主壳」上出条（改由表格式块内部滚），避免底部整区横条 */
+  /* Défilement vertical auto ; pas de barre horizontale sur la coquille (tables en interne) pour éviter une barre en bas de page */
   overflow-x: hidden !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
 }
-/* 内容包装：短页也至少铺满头栏下剩余视口，背景铺底；长页由父级 main 出现滚动条 */
+/* Enveloppe de page : pages courtes = au moins hauteur sous l’en-tête ; longues = scroll sur le main parent */
 #app-page-wrap {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
-  /* 变量继承自 .app-shell-main-outer，与顶栏/上间隔对齐 */
+  /* Variables héritées de .app-shell-main-outer, alignées en-tête / marge haute */
   min-height: calc(100dvh - var(--app-header-h, 80px) - var(--app-main-pad-top, 10px));
   box-sizing: border-box;
 }
 
-/* 中心胶囊条：等宽高亮、圆角、玻璃底 */
+/* Pilule de nav centrée : hauteur égale, surbrillance, bords arrondis, fond vitré */
 .app-nav-pill {
   max-width: min(52rem, 100%);
   margin-inline: auto;
@@ -169,7 +169,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   background: rgba(255, 255, 255, 0.6);
   transform: translateY(-0.5px);
 }
-/* Mantine 7 NavLink 激活 data-active */
+/* Mantine 7 NavLink : état actif via data-active */
 .app-nav-pill__link.mantine-NavLink-root[data-active] {
   color: #fff;
   background: var(--primary);
@@ -177,7 +177,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   box-shadow: 0 2px 8px rgba(30, 64, 175, 0.28);
 }
 
-/* 侧栏内链接与桌面一致可辨 */
+/* Liens du tiroir mobile : actif aussi lisible qu’en desktop */
 .app-nav-mobile__link.mantine-NavLink-root[data-active] {
   background: color-mix(in srgb, var(--primary) 10%, #fff);
   color: #1e3a8a;
@@ -186,7 +186,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   padding-left: 10px;
 }
 
-/* 主视图切换动效：浅滑入 + 淡入 220ms */
+/* Transition de vue : léger glissement + fondu 220 ms (voir transitionDuration AppShell) */
 .app-page-wrap {
   will-change: opacity, transform;
 }
@@ -205,7 +205,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   }
 }
 
-/* 小屏时避免标题与胶囊抢行过挤 */
+/* Petit écran : éviter que le titre et la pilule se tassent sur la même ligne */
 @media (max-width: 39.99em) {
   .app-brand-title {
     font-size: 0.95rem !important;
@@ -220,44 +220,52 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   max-width: 72ch;
 }
 
-/* 指数组合页根：允许在 flex 链上收缩，避免宽表格把 AppShell main 撑出整区横向条 */
-.page-ptf-index {
+/* Pages composition indice / ICB : min-width 0 sur la chaîne flex pour ne pas forcer de scroll horizontal sur tout le main */
+.page-ptf-index,
+.page-industry-icb {
   min-width: 0;
   max-width: 100%;
 }
-/* PTF 表格外壳 + Dash DataTable 内部类：把横向滚动关在本块内，不撑宽祖先链 */
+/* Contour du tableau : scroll horizontal ici si trop large, même « boîte » que le maxHeight vertical */
+.page-ptf-index .ptf-table-outer,
+.page-industry-icb .ptf-table-outer {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* PTF : enveloppe + racine DataTable + conteneur : largeur plafonnée ; scroll réel dans .dash-table-container */
 .page-ptf-index .ptf-table-outer,
 .page-ptf-index [id="ptf-table"],
 .page-ptf-index [id="ptf-table"] .dash-table-container,
+.page-industry-icb .ptf-table-outer,
+.page-industry-icb [id="ind-ptf-table"],
+.page-industry-icb [id="ind-ptf-table"] .dash-table-container {
+  max-width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+/* Ne pas mettre max-width:100% sur .dash-spreadsheet (incompatible grands tableaux, pas de barre horizontale) */
 .page-ptf-index [id="ptf-table"] .dash-spreadsheet,
 .page-ptf-index [id="ptf-table"] .dash-spreadsheet-container,
-.page-ptf-index [id="ptf-table"] .dash-spreadsheet .dash-spreadsheet-container {
-  max-width: 100% !important;
-  min-width: 0;
-  box-sizing: border-box;
-}
-.page-ptf-index [id="ptf-table"] .dash-table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* ICB 页主表：与组合页一致，横向滚动留在表容器内 */
-.page-industry-icb [id="ind-ptf-table"],
-.page-industry-icb [id="ind-ptf-table"] .dash-table-container,
+.page-ptf-index [id="ptf-table"] .dash-spreadsheet .dash-spreadsheet-container,
 .page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet,
-.page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet-container {
-  max-width: 100% !important;
-  min-width: 0;
+.page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet-container,
+.page-industry-icb [id="ind-ptf-table"] .dash-spreadsheet .dash-spreadsheet-container {
+  max-width: none !important;
   box-sizing: border-box;
 }
+.page-ptf-index [id="ptf-table"] .dash-table-container,
 .page-industry-icb [id="ind-ptf-table"] .dash-table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 /*
- * DataTable：列宽随内容（配合 fill_width=false + table width:max-content）；
- * 表头最多约两行；数据格单行不换行。
+ * DataTable : largeur de colonnes au contenu (fill_width=false + table width:max-content) ;
+ * en-têtes ~2 lignes max ; cellules sans retour à la ligne.
  */
 .page-ptf-index [id="ptf-table"] table,
 .page-industry-icb [id="ind-ptf-table"] table {
@@ -266,7 +274,8 @@ a.card-link, a.card-link:hover, a.card-link:visited {
 }
 .page-ptf-index [id="ptf-table"] th.dash-header-cell,
 .page-industry-icb [id="ind-ptf-table"] th.dash-header-cell {
-  white-space: normal !important;
+  /* pre-line : \n injectés par Python = retours à la ligne ; blancs sinon repliés ; mots longs avec break-word */
+  white-space: pre-line !important;
   word-break: break-word;
   overflow-wrap: break-word;
   line-height: 1.25;
@@ -280,7 +289,8 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   white-space: nowrap !important;
   box-sizing: border-box;
 }
-.page-ptf-index .mantine-Paper-root {
+.page-ptf-index .mantine-Paper-root,
+.page-industry-icb .mantine-Paper-root {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -567,7 +577,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
   top: 0;
   right: 0;
   bottom: 0;
-  /* 自定义侧栏宽度，对应 Mantine Drawer size=85% */
+  /* Largeur du panneau tiroir (aligné sur Mantine Drawer size=85%) */
   width: 85%;
   max-width: 100%;
   background: var(--surface);

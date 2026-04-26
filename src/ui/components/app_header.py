@@ -1,4 +1,4 @@
-"""固定顶栏 + 主导航（AppShell Header）：桌面端胶囊条，移动端折叠抽屉。"""
+"""En-tête fixe + navigation principale (AppShell Header) : pilule sur desktop, tiroir replié sur mobile."""
 from __future__ import annotations
 
 import dash_mantine_components as dmc
@@ -9,7 +9,7 @@ from config import settings
 
 
 def build_app_header_content() -> tuple[dmc.AppShellHeader, dmc.Drawer]:
-    """顶栏子节点 + 与 Burger 同用的侧栏抽屉，供 layout 一层组装。"""
+    """Contenu de l’en-tête + tiroir latéral partagé avec le burger, assemblé au niveau du layout."""
     brand = dmc.Anchor(
         href="/",
         underline=False,

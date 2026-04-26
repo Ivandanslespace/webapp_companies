@@ -32,18 +32,18 @@ HOST: str = "127.0.0.1"
 PORT: int = 8050
 DEBUG: bool = True
 
-# --- Page PTF / indice（业务人员主要改此处；列名需与 screen_aggregateCIQ 一致）---
+# --- Page PTF / indice (principalement modifiée par le métier ; noms de colonnes = screen_aggregateCIQ) ---
 
-# Benchmark 选择器默认项；None 时取 list_indices 第一个
+# Valeur par défaut du sélecteur de benchmark ; si None, premier élément de list_indices
 DEFAULT_BENCHMARK: str | None = "Weight in MSCI WORLD"
 
-# 默认日期：取该 bench 下日期列表的最后一个或第一个
+# Date par défaut : dernière ou première dans la liste des dates pour ce bench
 PTF_DEFAULT_DATE_MODE: str = "latest"  # "latest" | "first"
 
-# 主表 DataTable 每页行数
+# Lignes par page du DataTable principal
 PTF_TABLE_PAGE_SIZE: int = 25
 
-# 因子历史图：每项 (显示名, CIQ 列名)；顺序=图中 trace 顺序
+# Graphique d’historique des facteurs : chaque tuple (libellé affiché, colonne CIQ) ; ordre = ordre des traces
 FACTOR_TRACES: tuple[tuple[str, str], ...] = (
     ("Quality", "Quality Avg Percentile"),
     ("Growth", "Growth Avg Percentile"),
@@ -53,7 +53,7 @@ FACTOR_TRACES: tuple[tuple[str, str], ...] = (
     ("ML", "Score ML"),
 )
 
-# MultiFactor 合成分数参与均值的列（与 FACTOR_TRACES 中 ML 开关独立时可在此增删 Score ML）
+# Colonnes entrant dans la moyenne du score MultiFactor (ajouter/retirer « Score ML » ici, indépendamment du switch ML dans FACTOR_TRACES)
 MULTIFACTOR_BASE_COLUMNS: tuple[str, ...] = (
     "Quality Avg Percentile",
     "Growth Avg Percentile",
@@ -62,7 +62,7 @@ MULTIFACTOR_BASE_COLUMNS: tuple[str, ...] = (
     "Dividend Avg Percentile",
 )
 
-# 全站「因子列」判定（点击/排除逻辑）；与图中去掉 ML 时须同步去掉 "Score ML"
+# Colonnes « facteur » sur tout le site (clic / exclusion) ; retirer « Score ML » ici si ML retiré du graphique
 FACTOR_SCORE_COLUMNS_CONFIG: tuple[str, ...] = (
     "Multi Avg Percentile",
     "Score ML",
@@ -73,10 +73,10 @@ FACTOR_SCORE_COLUMNS_CONFIG: tuple[str, ...] = (
     "Quality Avg Percentile",
 )
 
-# 主表 ptf-cols 默认选中的指标列（CIQ 名）；空元组 = 用 summary 组全选 + bench
+# Colonnes d’indicateurs visibles par défaut dans ptf-cols (noms CIQ) ; tuple vide = groupe summary tout coché + bench
 PTF_DEFAULT_VISIBLE_COLUMNS: tuple[str, ...] = ()
 
-# 竞争对手指标分组：id/label/entries（(显示名, 列名)）
+# Groupes d’indicateurs pairs : id / label / entries ((libellé affiché, nom de colonne))
 PTF_METRIC_GROUPS: tuple[dict, ...] = (
     {
         "id": "summary",

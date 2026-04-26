@@ -30,6 +30,7 @@ from src.callbacks.index_composition import (  # réutilise constantes + figures
     _round2,
     _weight_to_pct2,
     _is_bench_weight_col,
+    _format_dash_datatable_header_label,
     build_company_factor_history_figure,
     build_peer_metric_figure,
     drawer_tab_key,
@@ -191,10 +192,8 @@ def _ind_table(
             "type": "numeric",
             "format": {"specifier": ",.2f"},
         }
-        if _is_bench_weight_col(c):
-            col_def["name"] = f"{c} (%)"
-        else:
-            col_def["name"] = c
+        col_name = f"{c} (%)" if _is_bench_weight_col(c) else c
+        col_def["name"] = _format_dash_datatable_header_label(col_name)
         table_cols.append(col_def)
     return rows, table_cols
 

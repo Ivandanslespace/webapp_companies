@@ -194,14 +194,10 @@ def layout() -> html.Div:
                             cell_selectable=True,
                             sort_action="native",
                             fill_width=False,
-                            # 注入的样式会挂在表组件作用域，约束 .dash-spreadsheet 等内层
+                            # Styles injectés au périmètre du tableau ; ciblent .dash-spreadsheet, etc.
                             css=[
                                 {
                                     "selector": ".dash-table-container",
-                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
-                                },
-                                {
-                                    "selector": ".dash-spreadsheet",
                                     "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
                                 },
                             ],
@@ -223,7 +219,7 @@ def layout() -> html.Div:
                             },
                         ),
                     ),
-                    # 与 styles.css 中 .ptf-table-outer / #ptf-table 配合，主壳不再出横向条
+                    # Avec .ptf-table-outer / #ptf-table dans styles.css : pas de barre horizontale sur toute la coquille
                     style={
                         "maxWidth": "100%",
                         "minWidth": 0,

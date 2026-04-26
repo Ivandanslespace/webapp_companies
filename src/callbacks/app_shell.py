@@ -1,4 +1,4 @@
-"""主导航高亮、移动端抽屉、主内容区路由切换动效。"""
+"""Actif de la nav principale, tiroir mobile, transition entre vues du contenu principal."""
 from __future__ import annotations
 
 from dash import Input, Output, State, callback
@@ -46,7 +46,7 @@ def _close_drawer_on_nav(_pathname, open_):
     raise PreventUpdate
 
 
-# 当用户点击遮罩/关闭时，部分环境下 Drawer 会回传 opened，保持 Store 与之一致
+# Clic sur fond / fermer : certains environnements renvoient opened du Drawer ; aligner le Store
 @callback(
     Output("app-nav-open-store", "data", allow_duplicate=True),
     Input("app-nav-drawer", "opened"),

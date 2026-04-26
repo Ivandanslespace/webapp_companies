@@ -170,7 +170,8 @@ def layout() -> html.Div:
                 radius="md",
                 p="md",
                 children=html.Div(
-                    dcc.Loading(
+                    className="ptf-table-outer",
+                    children=dcc.Loading(
                         type="default",
                         children=DataTable(
                             id="ind-ptf-table",
@@ -186,10 +187,6 @@ def layout() -> html.Div:
                             css=[
                                 {
                                     "selector": ".dash-table-container",
-                                    "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
-                                },
-                                {
-                                    "selector": ".dash-spreadsheet",
                                     "rule": "max-width: 100% !important; min-width: 0 !important; box-sizing: border-box;",
                                 },
                             ],
@@ -221,7 +218,13 @@ def layout() -> html.Div:
                             ],
                         ),
                     ),
-                    style={"overflowX": "auto", "maxHeight": "520px", "overflowY": "auto"},
+                    style={
+                        "maxWidth": "100%",
+                        "minWidth": 0,
+                        "overflowX": "auto",
+                        "maxHeight": "520px",
+                        "overflowY": "auto",
+                    },
                 ),
             ),
             html.Div(

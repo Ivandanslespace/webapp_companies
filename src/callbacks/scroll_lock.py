@@ -1,4 +1,4 @@
-"""换页时恢复 document.body 滚动，避免抽屉关闭/离页后仍被 overflow:hidden 锁住。"""
+"""À chaque changement de route, rétablit le scroll de document.body (évite overflow:hidden bloquant après tiroir ou navigation)."""
 from __future__ import annotations
 
 from dash import Input, Output, clientside_callback

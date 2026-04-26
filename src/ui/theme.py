@@ -30,7 +30,7 @@ MANTINE_THEME: dict = {
     "defaultRadius": "md",
     "white": COLOR_SURFACE,
     "black": COLOR_TEXT,
-    # 仅保留 sizes；勿在 headings 根上设 fontWeight（与 dmc/Mantine 7 序列化冲突会生成非法 CSS）
+    # Ne garder que sizes ; ne pas mettre fontWeight sur la racine headings (dmc/Mantine 7 : CSS invalide)
     "headings": {
         "sizes": {
             "h1": {"fontSize": "2.125rem", "lineHeight": "1.3", "fontWeight": 600},

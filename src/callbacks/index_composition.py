@@ -354,6 +354,19 @@ def _is_bench_weight_col(cid: str) -> bool:
     return isinstance(cid, str) and cid.startswith(WEIGHT_IN_PREFIX)
 
 
+def _format_dash_datatable_header_label(col_name: str) -> str:
+    """Insère des coupures (espaces ou \\n) dans les libellés longs pour ~2 lignes d’en-tête (CSS)."""
+    if len(col_name) <= 12:
+        return col_name
+    if " " in col_name or "_" in col_name:
+        words = [w for w in col_name.replace("_", " ").split(" ") if w]
+        if len(words) > 1:
+            mid = len(words) // 2
+            return " ".join(words[:mid]) + " \n" + " ".join(words[mid:])
+        return col_name[:12] + " " + col_name[12:]
+    return col_name[:12] + " " + col_name[12:]
+
+
 @callback(
     Output("ptf-date", "data"),
     Output("ptf-date", "value"),
@@ -454,10 +467,8 @@ def _ptf_table(ptf: str | None, bench: str | None, date: str | None, cols: list 
             "type": "numeric",
             "format": {"specifier": ",.2f"},
         }
-        if _is_bench_weight_col(c):
-            col_def["name"] = f"{c} (%)"
-        else:
-            col_def["name"] = c
+        col_name = f"{c} (%)" if _is_bench_weight_col(c) else c
+        col_def["name"] = _format_dash_datatable_header_label(col_name)
         table_cols.append(col_def)
     return rows, table_cols
 
@@ -639,7 +650,7 @@ def _ptf_checkbox_row(
 
 @callback(
     Output("ptf-drawer-open", "data"),
-    # 不监听 ptf-selected-isin：多页切回时 session 恢复会误触；仅用户点表格/按钮才开抽屉
+    # Pas d’Input sur ptf-selected-isin : restauration de session au retour d’onglet déclencherait à tort ; ouvrir seulement au clic tableau / boutons
     Input("ptf-table", "active_cell"),
     Input("ptf-table", "selected_rows"),
     Input("ptf-drawer-backdrop", "n_clicks"),
@@ -680,7 +691,7 @@ def _ptf_drawer_open(
         return no_update
 
     if prop_id == "ptf-table.selected_rows":
-        # 仅数据回填 selected_rows 时往往没有 active_cell，不打开
+        # Remplissage de données seul sur selected_rows : souvent pas d’active_cell, ne pas ouvrir
         if not cell or not isinstance(cell, dict) or not data or not selected_rows:
             return no_update
         rsel = int(selected_rows[0])
@@ -767,7 +778,7 @@ def _ptf_drawer_header(isin, data):
     )
 
 
-# 打开抽屉时禁止 body 滚动；关闭时恢复（换页由 scroll_lock 统一清空）
+# Tiroir ouvert : bloquer le scroll du body ; fermé : rétablir (changement de page : scroll_lock réinitialise)
 clientside_callback(
     """
     function(open) {

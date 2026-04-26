@@ -1,4 +1,4 @@
-"""应用外壳：MantineProvider + AppShell（固定顶栏 + 主内容 + 移动抽屉）。"""
+"""Coquille de l’app : MantineProvider + AppShell (en-tête fixe, contenu principal, tiroir mobile)."""
 from __future__ import annotations
 
 import dash
@@ -10,7 +10,7 @@ from src.ui.theme import MANTINE_THEME
 
 
 def build_layout() -> dmc.MantineProvider:
-    """根布局，包裹 MantineProvider（浅色主题）。"""
+    """Racine du layout, enveloppe MantineProvider (thème clair)."""
     header, mobile_drawer = build_app_header_content()
     return dmc.MantineProvider(
         theme=MANTINE_THEME,

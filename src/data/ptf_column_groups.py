@@ -6,7 +6,7 @@ from typing import Iterable, Optional
 
 from config.settings import FACTOR_SCORE_COLUMNS_CONFIG, PTF_METRIC_GROUPS
 
-# Les 7 « facteurs » (Scores) : sous-graphiques / exclus du clic « autre metric »（配置见 FACTOR_SCORE_COLUMNS_CONFIG）
+# Les 7 « facteurs » (Scores) : sous-graphiques / exclus du clic « autre metric » (voir FACTOR_SCORE_COLUMNS_CONFIG)
 FACTOR_SCORE_COLUMNS: frozenset[str] = frozenset(FACTOR_SCORE_COLUMNS_CONFIG)
 
 # Colonnes jamais interprétées comme métrique cliquable
@@ -39,7 +39,7 @@ def _build_raw_groups() -> tuple[ColumnGroup, ...]:
     return tuple(out)
 
 
-# Valeurs cibles（来自 config.settings.PTF_METRIC_GROUPS；运行时按 CIQ 列过滤）
+# Valeurs cibles (depuis config.settings.PTF_METRIC_GROUPS ; filtrage à l’exécution selon les colonnes CIQ)
 _RAW_GROUPS: tuple[ColumnGroup, ...] = _build_raw_groups()
 
 
