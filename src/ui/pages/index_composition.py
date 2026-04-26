@@ -6,6 +6,12 @@ import dash_mantine_components as dmc
 from dash import dcc, html
 from dash.dash_table import DataTable
 
+from config.settings import (
+    DEFAULT_BENCHMARK,
+    PTF_DEFAULT_DATE_MODE,
+    PTF_DEFAULT_VISIBLE_COLUMNS,
+    PTF_TABLE_PAGE_SIZE,
+)
 from src.data.index_screen_repository import get_index_screen_repository
 from src.callbacks.index_composition import build_drawer_metric_multiselect_data
 from src.data.ptf_column_groups import default_summary_column_names, filter_groups_for_ciq
@@ -33,19 +39,30 @@ def layout() -> html.Div:
     indices = idx.list_indices()
     index_data = [{"value": ic.column, "label": ic.label} for ic in indices]
     default_bench = (
-        "Weight in MSCI WORLD"
-        if any(ic.column == "Weight in MSCI WORLD" for ic in indices)
+        DEFAULT_BENCHMARK
+        if DEFAULT_BENCHMARK and any(ic.column == DEFAULT_BENCHMARK for ic in indices)
         else (indices[0].column if indices else None)
     )
     dates_l: list[str] = []
     if default_bench:
         dates_l = [_fmt_date(d) for d in idx.available_dates_for_index(default_bench)]
-    default_date = dates_l[-1] if dates_l else None
+    default_date = None
+    if dates_l:
+        default_date = dates_l[-1] if PTF_DEFAULT_DATE_MODE == "latest" else dates_l[0]
 
     ptf_names = ptf_repo.list_ptf_names()
     default_ptf = ptf_names[0] if ptf_names else None
 
-    dcols = default_summary_column_names(av, default_bench or "")
+    bench_s = default_bench or ""
+    if PTF_DEFAULT_VISIBLE_COLUMNS:
+        dcols: list[str] = []
+        if bench_s in av:
+            dcols.append(bench_s)
+        for c in PTF_DEFAULT_VISIBLE_COLUMNS:
+            if c in av and c not in dcols:
+                dcols.append(c)
+    else:
+        dcols = default_summary_column_names(av, bench_s)
     groups = filter_groups_for_ciq(av)
     col_options: list[dict] = []
     for g in groups:
@@ -67,7 +84,13 @@ def layout() -> html.Div:
                 fw=700,
                 c="#111827",
             ),
-            dmc.Space(h=12),
+            dmc.Text(
+                "Filtres PTF / bench / date, colonnes CIQ, puis détail par ligne (tiroir). "
+                "Même logique de colonnes que l’analyse sectorielle ICB pour comparer.",
+                size="sm",
+                c="#4B5563",
+            ),
+            dmc.Space(h=10),
             dmc.Paper(
                 withBorder=True,
                 radius="md",
@@ -163,18 +186,41 @@ def layout() -> html.Div:
                             id="ptf-table",
                             data=[],
                             columns=[],
-                            page_size=25,
+                            page_size=PTF_TABLE_PAGE_SIZE,
                             row_selectable="single",
                             selected_rows=[],
                             active_cell=None,
                             cell_selectable=True,
                             sort_action="native",
-                            style_table={"overflowX": "auto", "minWidth": "600px"},
-                            style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px"},
-                            style_header={"fontWeight": 600, "backgroundColor": "#F3F4F6"},
+                            # 宽度锁在父级内，列过多时由表格内部 overflowX 滚动
+                            style_table={
+                                "overflowX": "auto",
+                                "width": "100%",
+                                "minWidth": "100%",
+                            },
+                            style_cell={
+                                "textAlign": "left",
+                                "padding": "6px 10px",
+                                "fontSize": "13px",
+                                "whiteSpace": "normal",
+                                "height": "auto",
+                            },
+                            style_header={
+                                "fontWeight": 600,
+                                "backgroundColor": "#F3F4F6",
+                                "whiteSpace": "normal",
+                                "height": "auto",
+                                "verticalAlign": "bottom",
+                            },
                         ),
                     ),
-                    style={"overflowX": "auto", "maxHeight": "480px", "overflowY": "auto"},
+                    # 截断子级水平溢出，避免整页出现底部横向滚动条
+                    style={
+                        "width": "100%",
+                        "overflowX": "hidden",
+                        "maxHeight": "480px",
+                        "overflowY": "auto",
+                    },
                 ),
             ),
             html.Div(

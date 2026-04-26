@@ -4,18 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-# Les 7 « facteurs » (Scores) : 7 sous-graphiques par défaut, exclus du clic « autre metric »
-FACTOR_SCORE_COLUMNS: frozenset[str] = frozenset(
-    {
-        "Multi Avg Percentile",
-        "Score ML",
-        "MOM Score",
-        "LowVol Avg Percentile",
-        "Growth Avg Percentile",
-        "Dividend Avg Percentile",
-        "Quality Avg Percentile",
-    }
-)
+from config.settings import FACTOR_SCORE_COLUMNS_CONFIG, PTF_METRIC_GROUPS
+
+# Les 7 « facteurs » (Scores) : sous-graphiques / exclus du clic « autre metric »（配置见 FACTOR_SCORE_COLUMNS_CONFIG）
+FACTOR_SCORE_COLUMNS: frozenset[str] = frozenset(FACTOR_SCORE_COLUMNS_CONFIG)
 
 # Colonnes jamais interprétées comme métrique cliquable
 METADATA_DATA_TABLE_IDS: frozenset[str] = frozenset(
@@ -33,100 +25,22 @@ class ColumnGroup:
     entries: tuple[tuple[str, str], ...]
 
 
-# Valeurs cibles (noms tels que dans le parquet CIQ). Vérifiées à l'exécution.
-_RAW_GROUPS: tuple[ColumnGroup, ...] = (
-    ColumnGroup(
-        "summary",
-        "Summary",
-        (
-            ("ESG E", "ESG_E"),
-            ("ESG S", "ESG_S"),
-            ("ESG G", "ESG_G"),
-            ("ESG analyst", "ESG_ANALYST_SCORE"),
-            ("Carbon intensity (sales)", "CarbonIntensity_Sales"),
-            ("MarketV EUR", "Benchmark Market Value Millions in EUR"),
-            ("Multi score", "Multi Avg Percentile"),
-            ("Score ML", "Score ML"),
-        ),
-    ),
-    ColumnGroup(
-        "market",
-        "Market",
-        (
-            ("Mom score", "MOM Score"),
-            ("LowVol score", "LowVol Avg Percentile"),
-            ("Perf5D", "Perf5D"),
-            ("Perf1M", "Perf1M"),
-            ("Perf3M", "Perf3M"),
-            ("Perf6M", "Perf6M"),
-            ("Daily Vol 60J", "Daily Vol 60J"),
-            ("PMOM 12M1M", "PMOM 12M1M"),
-            ("EPS NTM 3M Growth", "EPS NTM 3M Growth"),
-            ("EPS Revision Ratio", "EPS Revision Ratio"),
-            ("SP Price Target CIQ", "SP Price Target CIQ"),
-            ("SP Price Close CIQ", "SP Price Close CIQ"),
-            ("Pct_Short_Interest", "Pct_Short_Interest"),
-        ),
-    ),
-    ColumnGroup(
-        "growth",
-        "Growth",
-        (
-            ("Growth score", "Growth Avg Percentile"),
-            ("Sales Growth FY1", "Sales Growth FY1"),
-            ("Gross Income Growth FY1", "Gross Income Growth FY1"),
-            ("EPS Growth FY1", "EPS Growth FY1"),
-            ("SP Est 5Y EPS Gr CIQ", "SP Est 5Y EPS Gr CIQ"),
-            ("Revenue 5Y CAGR", "Revenue 5Y CAGR"),
-            ("Gross Profit 5Y CAGR", "Gross Profit 5Y CAGR"),
-            ("Ebitda 5Y CAGR", "Ebitda 5Y CAGR"),
-            ("Ebit 5Y CAGR", "Ebit 5Y CAGR"),
-            ("CFO 5Y CAGR", "CFO 5Y CAGR"),
-            ("Const Earning 5Y CAGR", "Const Earning 5Y CAGR"),
-        ),
-    ),
-    ColumnGroup(
-        "valorisation",
-        "Valorisation",
-        (
-            ("Value score", "Value Avg Percentile"),
-            ("PE LTM", "PE LTM"),
-            ("PE FY1", "PE FY1"),
-            ("PB LTM", "PB LTM"),
-            ("Price to Book FY1", "Price to Book FY1"),
-            ("PFCF LTM", "PFCF LTM"),
-            ("Price to FreeCF FY1", "Price to FreeCF FY1"),
-            ("EV To EBITDA LTM", "EV To EBITDA LTM"),
-            ("EV To EBITDA FY1", "EV To EBITDA FY1"),
-            ("EV to Ebit FY1", "EV to Ebit FY1"),
-            ("EV to Sales FY1", "EV to Sales FY1"),
-            ("Price Cont Op Earning", "Price Cont Op Earning"),
-            ("P to CFO", "P to CFO"),
-        ),
-    ),
-    ColumnGroup(
-        "quali",
-        "Quali",
-        (
-            ("Dividend score", "Dividend Avg Percentile"),
-            ("Quality score", "Quality Avg Percentile"),
-            ("Gross Margin", "Gross Margin"),
-            ("Ebitda Margin", "Ebitda Margin"),
-            ("EBITDAm FY1", "EBITDAm FY1"),
-            ("Cont Op Earning Margin", "Cont Op Earning Margin"),
-            ("Oper Margin", "Oper Margin"),
-            ("ROE avg FY0", "ROE avg FY0"),
-            ("Asset TO exFIN", "Asset TO exFIN"),
-            ("FCF Conversion", "FCF Conversion"),
-            ("NetDebt to EBITDA exFIN", "NetDebt to EBITDA exFIN"),
-            ("netD to EBITDA FY1", "netD to EBITDA FY1"),
-            ("Net Debt to Ebit", "Net Debt to Ebit"),
-            ("Net Debt to Tot Equity", "Net Debt to Tot Equity"),
-            ("Net Debt to Market Cap", "Net Debt to Market Cap"),
-            ("Current Ratio", "Current Ratio"),
-        ),
-    ),
-)
+def _build_raw_groups() -> tuple[ColumnGroup, ...]:
+    out: list[ColumnGroup] = []
+    for g in PTF_METRIC_GROUPS:
+        ent = tuple(tuple(p) for p in g["entries"])
+        out.append(
+            ColumnGroup(
+                id=str(g["id"]),
+                label=str(g["label"]),
+                entries=ent,
+            )
+        )
+    return tuple(out)
+
+
+# Valeurs cibles（来自 config.settings.PTF_METRIC_GROUPS；运行时按 CIQ 列过滤）
+_RAW_GROUPS: tuple[ColumnGroup, ...] = _build_raw_groups()
 
 
 def filter_groups_for_ciq(available: Iterable[str]) -> list[ColumnGroup]:

@@ -14,8 +14,10 @@ dash.register_page(__name__, path="/", name="Entreprises")
 def layout() -> html.Div:
     repo = get_repository()
     return html.Div(
-        [
+        className="page-entreprises",
+        children=[
             dcc.Store(id="home-page-index", data=1),
+            dmc.Space(h=28),
             dmc.Grid(
                 gutter="xl",
                 children=[
@@ -30,7 +32,7 @@ def layout() -> html.Div:
                         span={"base": 12, "md": 9},
                         children=[
                             dmc.Stack(
-                                gap="md",
+                                gap="xl",
                                 children=[
                                     dmc.Group(
                                         justify="space-between",

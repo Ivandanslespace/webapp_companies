@@ -53,7 +53,8 @@ html, body {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 8px 12px 20px 12px;
+  /* 与顶栏之间的留白主要由 .app-shell-main-outer 的 --app-main-pad-top 承担；此处略增避免首行标题与下方第一块内容贴太紧 */
+  padding: 12px 12px 24px 12px;
   box-sizing: border-box;
 }
 
@@ -106,7 +107,7 @@ a.card-link, a.card-link:hover, a.card-link:visited {
 .app-shell-main-outer,
 .app-shell-root .mantine-AppShell-main {
   --app-header-h: 80px;
-  --app-main-pad-top: 10px; /* 顶栏与首屏内容之间的额外间隔 */
+  --app-main-pad-top: 20px; /* 顶栏与主内容区首行之间的呼吸空间（与 layout 中 header 高度 80 配套） */
   flex: 1 1 auto !important;
   min-width: 0;
   min-height: 0 !important;

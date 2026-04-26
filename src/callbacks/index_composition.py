@@ -8,6 +8,11 @@ import pandas as pd
 from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update, callback_context
 import dash_mantine_components as dmc
 
+from config.settings import (
+    FACTOR_TRACES,
+    MULTIFACTOR_BASE_COLUMNS,
+    PTF_DEFAULT_DATE_MODE,
+)
 from src.data.index_screen_repository import get_index_screen_repository
 from src.data.ptf_column_groups import (
     FACTOR_SCORE_COLUMNS,
@@ -36,23 +41,10 @@ _GRAY = "rgba(120,120,120,0.2)"
 _ACCENT = "#0F766E"
 _BLUE = "#1E40AF"
 
-# Libellés produit -> colonnes CIQ (screen_aggregateCIQ) ; Value = Dividend Avg Percentile dans ce jeu de données.
-_FACTOR_TRACE_SPEC: tuple[tuple[str, str], ...] = (
-    ("Quality", "Quality Avg Percentile"),
-    ("Growth", "Growth Avg Percentile"),
-    ("Lowvol", "LowVol Avg Percentile"),
-    ("Momentum", "MOM Score"),
-    ("Value", "Dividend Avg Percentile"),
-    ("ML", "Score ML"),
-)
+# Libellés produit -> colonnes CIQ（config.FACTOR_TRACES）；Value = Dividend Avg Percentile
+_FACTOR_TRACE_SPEC = FACTOR_TRACES
 _COL_MULTIFACTOR = "Multi Avg Percentile"
-_BASE_COLS_SYNTH_MULTIFACTOR: tuple[str, ...] = (
-    "Quality Avg Percentile",
-    "Growth Avg Percentile",
-    "LowVol Avg Percentile",
-    "MOM Score",
-    "Dividend Avg Percentile",
-)
+_BASE_COLS_SYNTH_MULTIFACTOR = MULTIFACTOR_BASE_COLUMNS
 _FACTOR_TRACE_COLORS: tuple[str, ...] = (
     "#0F766E",
     "#1D4ED8",
@@ -373,7 +365,9 @@ def _ptf_bench_dates(bench: str | None):
     r = get_index_screen_repository()
     ds = r.available_dates_for_index(bench)
     data = [{"value": _fmt(x), "label": _fmt(x)} for x in ds]
-    v = data[-1]["value"] if data else None
+    v = None
+    if data:
+        v = data[-1]["value"] if PTF_DEFAULT_DATE_MODE == "latest" else data[0]["value"]
     return data, v
 
 
@@ -645,22 +639,56 @@ def _ptf_checkbox_row(
 
 @callback(
     Output("ptf-drawer-open", "data"),
-    Input("ptf-selected-isin", "data"),
+    # 不监听 ptf-selected-isin：多页切回时 session 恢复会误触；仅用户点表格/按钮才开抽屉
+    Input("ptf-table", "active_cell"),
+    Input("ptf-table", "selected_rows"),
     Input("ptf-drawer-backdrop", "n_clicks"),
     Input("ptf-drawer-close", "n_clicks"),
     Input("ptf-drawer-reopen", "n_clicks"),
+    State("ptf-table", "data"),
+    State("ptf-selected-isin", "data"),
+    prevent_initial_call=True,
 )
-def _ptf_drawer_open(isin, _nb, _nc, _nr):
+def _ptf_drawer_open(
+    cell,
+    selected_rows,
+    _nb,
+    _nc,
+    _nr,
+    data,
+    isin,
+):
     if not callback_context.triggered:
+        return no_update
+    prop_id = str(callback_context.triggered[0]["prop_id"])
+    if prop_id in ("ptf-drawer-backdrop.n_clicks", "ptf-drawer-close.n_clicks"):
         return False
-    tid = callback_context.triggered_id
-    if tid in ("ptf-drawer-backdrop", "ptf-drawer-close"):
-        return False
-    if tid == "ptf-drawer-reopen":
+    if prop_id == "ptf-drawer-reopen.n_clicks":
         return bool(isin)
-    if tid == "ptf-selected-isin":
-        return bool(isin)
-    return False
+
+    def _row_has_isin(r: int) -> bool:
+        if not data or r < 0 or r >= len(data):
+            return False
+        return bool(data[r].get("isin"))
+
+    if prop_id == "ptf-table.active_cell":
+        if not cell or not isinstance(cell, dict):
+            return no_update
+        r = cell.get("row")
+        if r is not None and isinstance(r, (int, float)) and _row_has_isin(int(r)):
+            return True
+        return no_update
+
+    if prop_id == "ptf-table.selected_rows":
+        # 仅数据回填 selected_rows 时往往没有 active_cell，不打开
+        if not cell or not isinstance(cell, dict) or not data or not selected_rows:
+            return no_update
+        rsel = int(selected_rows[0])
+        if int(cell.get("row", -1)) != rsel or not _row_has_isin(rsel):
+            return no_update
+        return True
+
+    return no_update
 
 
 @callback(
