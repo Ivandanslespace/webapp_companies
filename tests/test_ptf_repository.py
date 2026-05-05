@@ -8,8 +8,8 @@ from src.data.ptf_repository import PtfRepository
 from src.data.schemas_ptf import PTF_COL_ISIN, PTF_COL_PTF
 
 pytestmark = pytest.mark.skipif(
-    not settings.PTF_PARQUET.exists(),
-    reason="ptf.parquet absent",
+    not settings.PTF_XLSX.exists(),
+    reason="PTF_IA_WORLD.xlsx absent",
 )
 
 

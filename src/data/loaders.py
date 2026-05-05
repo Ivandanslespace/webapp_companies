@@ -124,32 +124,43 @@ _ptf_cache_mtime: float | None = None
 _ptf_cache_frame: pd.DataFrame | None = None
 
 
+def _normalize_ptf_excel_header(c: object) -> str:
+    """En-tête Excel : retire le BOM et les espaces en bout, fusionne les espaces consécutifs, puis majuscules (pour les noms logiques)."""
+    s = str(c).strip().lstrip("\ufeff").strip()
+    s = " ".join(s.split())
+    return s.upper()
+
+
 def load_ptf() -> pd.DataFrame:
-    """Charge ``ptf.parquet`` : colonnes normalisées ``PTF``, ``ISIN``, ``Weight`` (+ optionnelles)."""
-    path = settings.PTF_PARQUET
+    """Charge ``PTF_IA_WORLD.xlsx`` : colonnes ``PTF``, ``Date``, ``Weight``, ``ISIN`` (noms normalisés)."""
+    path = settings.PTF_XLSX
     if not path.exists():
         raise FileNotFoundError(f"Data file not found: {path}")
     mtime = path.stat().st_mtime
     global _ptf_cache_mtime, _ptf_cache_frame
     if _ptf_cache_frame is not None and _ptf_cache_mtime == mtime:
         return _ptf_cache_frame
-    raw = pd.read_parquet(path)
-    # Normalisation des noms de colonnes (casse / espaces)
+    raw = pd.read_excel(path, engine="openpyxl")
+    # Noms logiques : PTF / Date / Weight / ISIN (variante WEIGHTS acceptée)
     colmap: dict[str, str] = {}
     for c in raw.columns:
-        key = str(c).strip().upper()
+        key = _normalize_ptf_excel_header(c)
         if key == "PTF":
             colmap[c] = PTF_COL_PTF
         elif key == "ISIN":
             colmap[c] = PTF_COL_ISIN
-        elif key == "WEIGHT":
+        elif key in ("WEIGHT", "WEIGHTS"):
             colmap[c] = PTF_COL_WEIGHT
         elif key == "DATE":
             colmap[c] = PTF_COL_DATE
     df = raw.rename(columns=colmap)
     for req in (PTF_COL_PTF, PTF_COL_ISIN, PTF_COL_WEIGHT):
         if req not in df.columns:
-            raise ValueError(f"Missing column {req} in {path.name}")
+            seen = [_normalize_ptf_excel_header(x) for x in raw.columns]
+            raise ValueError(
+                f"Missing column {req} in {path.name}; "
+                f"normalized headers: {seen}"
+            )
     if PTF_COL_DATE in df.columns:
         df[PTF_COL_DATE] = pd.to_datetime(df[PTF_COL_DATE], errors="coerce")
     df[PTF_COL_ISIN] = df[PTF_COL_ISIN].astype(str).str.strip()

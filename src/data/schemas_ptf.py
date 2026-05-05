@@ -1,4 +1,4 @@
-"""Colonnes normalisées pour ``ptf.parquet``."""
+"""Colonnes normalisées pour le fichier PTF (Excel ``PTF_IA_WORLD.xlsx``)."""
 from __future__ import annotations
 
 PTF_COL_PTF: str = "PTF"

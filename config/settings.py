@@ -15,7 +15,8 @@ DES_PARQUET: Path = DATA_DIR / "last_DES.parquet"
 NEWS_PARQUET: Path = DATA_DIR / "Last_NEWS_3months.parquet"
 SCREEN_AGG_CIQ_PARQUET: Path = DATA_DIR / "screen_aggregateCIQ.parquet"
 ICB_MAPPING_CSV: Path = DATA_DIR / "ICB_mapping.csv"
-PTF_PARQUET: Path = DATA_DIR / "ptf.parquet"
+# Feuille : colonnes PTF, Date, Weight, ISIN
+PTF_XLSX: Path = DATA_DIR / "PTF_IA_WORLD.xlsx"
 
 # --- UI ---
 APP_TITLE: str = "Panorama des Entreprises"

@@ -1,4 +1,4 @@
-"""Portefeuilles (PTF) issus de ``ptf.parquet`` — accès haut niveau."""
+"""Portefeuilles (PTF) issus de ``PTF_IA_WORLD.xlsx`` — accès haut niveau."""
 from __future__ import annotations
 
 from typing import Optional

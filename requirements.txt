@@ -5,6 +5,7 @@ dash-iconify>=0.1.2
 
 # Data
 pandas>=2.2
+openpyxl>=3.1
 pyarrow>=15
 plotly>=5.20
 numpy>=1.26
